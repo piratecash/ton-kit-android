@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ton-kit-android"
 include ':app'
+include ':tonkit'
