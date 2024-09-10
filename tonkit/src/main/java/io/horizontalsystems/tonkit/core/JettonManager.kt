@@ -53,7 +53,7 @@ class JettonManager(
                 SyncState.Synced
             }
         } catch (e: Throwable) {
-            Log.e("AAA", "Jetton balances sync error: $e")
+            Log.e("AAA", "Jetton balances sync error: $e", e)
             _syncStateFlow.update {
                 SyncState.NotSynced(e)
             }

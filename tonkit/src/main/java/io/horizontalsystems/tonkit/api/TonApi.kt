@@ -9,12 +9,12 @@ import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.JettonBalance
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.Network.*
-import io.swagger.client.apis.AccountsApi
-import io.swagger.client.apis.BlockchainApi
-import io.swagger.client.apis.EmulationApi
-import io.swagger.client.apis.JettonsApi
-import io.swagger.client.apis.LiteServerApi
-import io.swagger.client.apis.WalletApi
+import io.tonapi.apis.AccountsApi
+import io.tonapi.apis.BlockchainApi
+import io.tonapi.apis.EmulationApi
+import io.tonapi.apis.JettonsApi
+import io.tonapi.apis.LiteServerApi
+import io.tonapi.apis.WalletApi
 import java.math.BigInteger
 
 class TonApi(network: Network) : IApi {
@@ -97,12 +97,14 @@ class TonApi(network: Network) : IApi {
     }
 
     override suspend fun estimateFee(boc: String): BigInteger {
-        val result = emulationApi.emulateMessageToWallet(boc)
-        return BigInteger.valueOf(result.trace.transaction.totalFees)
+        TODO()
+//        val result = emulationApi.emulateMessageToWallet(boc)
+//        return BigInteger.valueOf(result.trace.transaction.totalFees)
     }
 
     override suspend fun send(boc: String) {
-        blockchainApi.sendBlockchainMessage(boc)
+        TODO()
+//        blockchainApi.sendBlockchainMessage(boc)
     }
 
 }

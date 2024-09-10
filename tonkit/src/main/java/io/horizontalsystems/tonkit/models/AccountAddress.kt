@@ -9,7 +9,7 @@ data class AccountAddress(
     val isWallet: Boolean,
 ) {
     companion object {
-        fun fromApi(accountAddress: io.swagger.client.models.AccountAddress): AccountAddress {
+        fun fromApi(accountAddress: io.tonapi.models.AccountAddress): AccountAddress {
             return AccountAddress(
                 Address.parse(accountAddress.address),
                 accountAddress.name,

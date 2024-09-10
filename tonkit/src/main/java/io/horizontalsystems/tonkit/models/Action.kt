@@ -16,9 +16,9 @@ data class Action(val type: Type, val status: Status) {
         data class Unknown(val rawType: String) : Type()
 
         companion object {
-            fun fromApi(action: io.swagger.client.models.Action): Type {
+            fun fromApi(action: io.tonapi.models.Action): Type {
                 val type = when (action.type) {
-                    io.swagger.client.models.Action.Type.TONTRANSFER -> {
+                    io.tonapi.models.Action.Type.TonTransfer -> {
                         action.tonTransfer?.let {
                             TonTransfer(
                                 TonTransfer(
@@ -31,7 +31,7 @@ data class Action(val type: Type, val status: Status) {
                         }
                     }
 
-                    io.swagger.client.models.Action.Type.JETTONTRANSFER -> {
+                    io.tonapi.models.Action.Type.JettonTransfer -> {
                         action.jettonTransfer?.let { jt ->
                             JettonTransfer(
                                 JettonTransfer(
@@ -47,7 +47,7 @@ data class Action(val type: Type, val status: Status) {
                         }
                     }
 
-                    io.swagger.client.models.Action.Type.JETTONBURN -> {
+                    io.tonapi.models.Action.Type.JettonBurn -> {
                         action.jettonBurn?.let { jb ->
                             JettonBurn(
                                 JettonBurn(
@@ -60,7 +60,7 @@ data class Action(val type: Type, val status: Status) {
                         }
                     }
 
-                    io.swagger.client.models.Action.Type.JETTONMINT -> {
+                    io.tonapi.models.Action.Type.JettonMint -> {
                         action.jettonMint?.let { jm ->
                             JettonMint(
                                 JettonMint(
@@ -73,7 +73,7 @@ data class Action(val type: Type, val status: Status) {
                         }
                     }
 
-                    io.swagger.client.models.Action.Type.CONTRACTDEPLOY -> {
+                    io.tonapi.models.Action.Type.ContractDeploy -> {
                         action.contractDeploy?.let { cd ->
                             ContractDeploy(
                                 ContractDeploy(
@@ -84,7 +84,7 @@ data class Action(val type: Type, val status: Status) {
                         }
                     }
 
-                    io.swagger.client.models.Action.Type.JETTONSWAP -> {
+                    io.tonapi.models.Action.Type.JettonSwap -> {
                         action.jettonSwap?.let { js ->
                             JettonSwap(
                                 JettonSwap(
@@ -106,7 +106,7 @@ data class Action(val type: Type, val status: Status) {
                         }
                     }
 
-                    io.swagger.client.models.Action.Type.SMARTCONTRACTEXEC -> {
+                    io.tonapi.models.Action.Type.SmartContractExec -> {
                         action.smartContractExec?.let { sc ->
                             SmartContract(
                                 SmartContract(
@@ -132,9 +132,9 @@ data class Action(val type: Type, val status: Status) {
         FAILED("failed");
 
         companion object {
-            fun fromApi(status: io.swagger.client.models.Action.Status) = when (status) {
-                io.swagger.client.models.Action.Status.OK -> OK
-                io.swagger.client.models.Action.Status.FAILED -> FAILED
+            fun fromApi(status: io.tonapi.models.Action.Status) = when (status) {
+                io.tonapi.models.Action.Status.ok -> OK
+                io.tonapi.models.Action.Status.failed -> FAILED
             }
         }
     }
@@ -172,7 +172,7 @@ data class Action(val type: Type, val status: Status) {
 
     data class ContractDeploy(
         val address: Address,
-        val interfaces: Array<String>,
+        val interfaces: List<String>,
     )
 
     data class JettonSwap(
