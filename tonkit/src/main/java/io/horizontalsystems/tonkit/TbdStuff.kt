@@ -1,13 +1,11 @@
 package io.horizontalsystems.tonkit
 
-class Address {
-    fun toRaw(): String {
-        TODO("Not yet implemented")
-    }
+data class Address(val raw: String) {
+    fun toRaw() = raw
 
     companion object {
         fun parse(addressStr: String): Address {
-            TODO("Not yet implemented")
+            return Address(addressStr)
         }
     }
 }
