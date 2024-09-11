@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import io.horizontalsystems.tonkit.core.TonKit
 import io.horizontalsystems.tonkit.core.TonKit.WalletType
 import io.horizontalsystems.tonkit.models.Account
+import io.horizontalsystems.tonkit.models.JettonBalance
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.SyncState
 import kotlinx.coroutines.Dispatchers
@@ -35,11 +36,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var syncState = tonKit.syncStateFlow.value
     private var account = tonKit.accountFlow.value
+    private var jettonSyncState = tonKit.jettonSyncStateFlow.value
+    private var jettonBalanceMap = tonKit.jettonBalanceMapFlow.value
 
     var uiState by mutableStateOf(
         MainUiState(
             syncState = syncState,
-            account = account
+            jettonSyncState = jettonSyncState,
+            account = account,
+            jettonBalanceMap = jettonBalanceMap,
         )
     )
         private set
@@ -53,6 +58,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch(Dispatchers.Default) {
             tonKit.accountFlow.collect(::updateAccount)
+        }
+        viewModelScope.launch(Dispatchers.Default) {
+            tonKit.jettonSyncStateFlow.collect(::updateJettonSyncState)
+        }
+        viewModelScope.launch(Dispatchers.Default) {
+            tonKit.jettonBalanceMapFlow.collect { updateJettonBalanceMap(it) }
         }
 
         refreshFee()
@@ -97,6 +108,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         emitState()
     }
 
+    private fun updateJettonSyncState(syncState: SyncState) {
+        this.jettonSyncState = syncState
+
+        emitState()
+    }
+
+    private fun updateJettonBalanceMap(jettonBalanceMap: Map<Address, JettonBalance>) {
+        this.jettonBalanceMap = jettonBalanceMap
+
+        emitState()
+    }
+
     private fun updateAccount(account: Account?) {
         this.account = account
 
@@ -111,7 +134,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             uiState = MainUiState(
                 syncState = syncState,
+                jettonSyncState = jettonSyncState,
                 account = account,
+                jettonBalanceMap = jettonBalanceMap,
             )
         }
     }
@@ -165,7 +190,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 data class MainUiState(
     val syncState: SyncState,
+    val jettonSyncState: SyncState,
     val account: Account?,
+    val jettonBalanceMap: Map<Address, JettonBalance>,
 )
 
 fun SyncState.toStr() = when (this) {

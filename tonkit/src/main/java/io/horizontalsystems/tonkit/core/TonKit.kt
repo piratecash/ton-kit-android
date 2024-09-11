@@ -15,6 +15,8 @@ class TonKit(
 
     val syncStateFlow by accountManager::syncStateFlow
     val accountFlow by accountManager::accountFlow
+    val jettonSyncStateFlow by jettonManager::syncStateFlow
+    val jettonBalanceMapFlow by jettonManager::jettonBalanceMapFlow
 
     suspend fun sync() {
         accountManager.sync()

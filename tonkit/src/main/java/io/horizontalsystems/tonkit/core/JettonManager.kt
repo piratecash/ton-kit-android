@@ -20,7 +20,7 @@ class JettonManager(
 
     private val _syncStateFlow =
         MutableStateFlow<SyncState>(SyncState.NotSynced(TonKit.SyncError.NotStarted))
-    private val syncStateFlow = _syncStateFlow.asStateFlow()
+    val syncStateFlow = _syncStateFlow.asStateFlow()
 
     private fun getInitialJettonBalanceMap(): Map<Address, JettonBalance> {
         val jettonBalances = dao.getJettonBalances()
@@ -47,6 +47,7 @@ class JettonManager(
                 jettonBalances.associateBy { it.jettonAddress }
             }
 
+            dao.deleteAll()
             dao.insertAll(jettonBalances)
 
             _syncStateFlow.update {

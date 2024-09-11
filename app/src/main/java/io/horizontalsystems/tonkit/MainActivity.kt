@@ -6,11 +6,18 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
@@ -30,6 +37,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
 import io.horizontalsystems.tonkit.ui.theme.TonkitadnroidTheme
 import kotlinx.coroutines.launch
 
@@ -55,9 +64,7 @@ fun MainScreen() {
     val uiState = viewModel.uiState
     Scaffold {
         Column(
-            modifier = Modifier
-                .padding(it)
-                .padding(16.dp)
+            modifier = Modifier.padding(it)
         ) {
             var currentPage by remember { mutableStateOf(Page.Balance) }
 
@@ -159,6 +166,7 @@ fun SendScreen(viewModel: MainViewModel, uiState: MainUiState) {
     }
 }
 
+@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun BalanceScreen(viewModel: MainViewModel, uiState: MainUiState) {
     val address = viewModel.address
@@ -168,24 +176,44 @@ fun BalanceScreen(viewModel: MainViewModel, uiState: MainUiState) {
         Text(text = "Balance: ${uiState.account?.balance}")
         Text(text = "Account Status: ${uiState.account?.status}")
         Text(text = "Sync State: ${uiState.syncState.description}")
-//        Text(text = "Tx Sync State: ${uiState.txSyncState.toStr()}")
+        Text(text = "Jetton Sync State: ${uiState.jettonSyncState.description}")
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(
-            onClick = {
-                viewModel.start()
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = viewModel::start) {
+                Text(text = "start")
             }
-        ) {
-            Text(text = "start")
+            Spacer(modifier = Modifier.weight(1f))
+            Button(onClick = viewModel::stop) {
+                Text(text = "Stop")
+            }
         }
 
-        Button(
-            onClick = {
-                viewModel.stop()
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text("JETTONS")
+        Spacer(modifier = Modifier.height(10.dp))
+        LazyColumn {
+            items(uiState.jettonBalanceMap.values.toList()) {
+                Card(modifier = Modifier.padding(bottom = 12.dp)) {
+                    Row(modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)) {
+                        GlideImage(
+                            modifier = Modifier.size(50.dp),
+                            model = it.jetton.image,
+                            contentDescription = "",
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text(it.jetton.symbol)
+                            Text(it.jetton.name)
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        val balance = it.balance.toBigDecimal(it.jetton.decimals).stripTrailingZeros()
+                        Text(balance.toPlainString())
+                    }
+                }
             }
-        ) {
-            Text(text = "Stop")
         }
     }
 }
