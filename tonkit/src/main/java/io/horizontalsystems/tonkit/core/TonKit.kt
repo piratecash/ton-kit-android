@@ -5,6 +5,9 @@ import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.storage.KitDatabase
+import org.ton.api.pk.PrivateKeyEd25519
+import org.ton.contract.wallet.WalletV4R2Contract
+import org.ton.mnemonic.Mnemonic
 
 class TonKit(
     private val address: Address,
@@ -24,8 +27,9 @@ class TonKit(
     }
 
     sealed class WalletType {
-        data object Full : WalletType()
         data class Watch(val address: String) : WalletType()
+        data class Seed(val seed: ByteArray) : WalletType()
+        data class Mnemonic(val words: List<String>, val passphrase: String = "") : WalletType()
     }
 
 //    enum WalletVersion {
@@ -51,12 +55,21 @@ class TonKit(
 
     companion object {
         fun getInstance(type: WalletType, network: Network, context: Context, walletId: String): TonKit {
-
             val address: Address
+            val privateKey: PrivateKeyEd25519?
 
             when (type) {
-                WalletType.Full -> TODO()
+                is WalletType.Mnemonic -> {
+                    val seed = Mnemonic.toSeed(type.words, type.passphrase)
+                    privateKey = PrivateKeyEd25519(seed)
+                    address = Address(WalletV4R2Contract.address(privateKey, 0))
+                }
+                is WalletType.Seed -> {
+                    privateKey = PrivateKeyEd25519(type.seed)
+                    address = Address(WalletV4R2Contract.address(privateKey, 0))
+                }
                 is WalletType.Watch -> {
+                    privateKey = null
                     address = Address.parse(type.address)
                 }
             }

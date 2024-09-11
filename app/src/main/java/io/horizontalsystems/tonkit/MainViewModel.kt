@@ -22,14 +22,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val passphrase = ""
     private val watchAddress = "UQBpAeJL-VSLCigCsrgGQHCLeiEBdAuZBlbrrUGI4BVQJoPM"
 
-    //    private val tonKit = tonKitFactory.createWatch(watchAddress, "watch")
-//    private val tonKit = tonKitFactory.create(words, passphrase, words.first())
-//    val tonKitFactory = TonKitFactory(DriverFactory(getApplication()), ConnectionManager(getApplication()))
+    //    private val walletType = WalletType.Watch("UQBpAeJL-VSLCigCsrgGQHCLeiEBdAuZBlbrrUGI4BVQJoPM")
+    private val walletType = WalletType.Mnemonic(words, "")
     private val tonKit = TonKit.getInstance(
-        WalletType.Watch(watchAddress),
+        walletType,
         Network.MainNet,
         getApplication(),
-        "watch"
+        "wallet-${walletType.javaClass.simpleName}"
     )
 
     val address = tonKit.receiveAddress.toUserFriendly()
