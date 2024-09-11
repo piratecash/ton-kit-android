@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
@@ -115,12 +114,12 @@ fun SendScreen(viewModel: MainViewModel, uiState: MainUiState) {
 
         Text(
             modifier = Modifier.clickable {
-                uiState.balance?.let {
-                    amountStr = it
+                uiState.account?.balance?.let {
+                    amountStr = it.toString()
                     viewModel.setAmount(amountStr)
                 }
             },
-            text = "Balance: ${uiState.balance}",
+            text = "Balance: ${uiState.account?.balance}",
         )
 
         TextField(
@@ -166,8 +165,9 @@ fun BalanceScreen(viewModel: MainViewModel, uiState: MainUiState) {
 
     Column {
         Text(text = "Address: $address")
-        Text(text = "Balance: ${uiState.balance}")
-//        Text(text = "Sync State: ${uiState.syncState.toStr()}")
+        Text(text = "Balance: ${uiState.account?.balance}")
+        Text(text = "Account Status: ${uiState.account?.status}")
+        Text(text = "Sync State: ${uiState.syncState.description}")
 //        Text(text = "Tx Sync State: ${uiState.txSyncState.toStr()}")
 
         Spacer(modifier = Modifier.height(20.dp))

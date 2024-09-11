@@ -13,14 +13,13 @@ class TonKit(
 ) {
     val receiveAddress get() = address
 
+    val syncStateFlow by accountManager::syncStateFlow
+    val accountFlow by accountManager::accountFlow
 
     suspend fun sync() {
         accountManager.sync()
         jettonManager.sync()
     }
-
-
-
 
     sealed class WalletType {
         data object Full : WalletType()

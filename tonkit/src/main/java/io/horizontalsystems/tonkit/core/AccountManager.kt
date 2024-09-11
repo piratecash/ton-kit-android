@@ -15,10 +15,10 @@ class AccountManager(
     private val dao: AccountDao,
 ) {
     private val _accountFlow = MutableStateFlow(dao.getAccount(address))
-    private val accountFlow = _accountFlow.asStateFlow()
+    val accountFlow = _accountFlow.asStateFlow()
 
     private val _syncStateFlow = MutableStateFlow<SyncState>(SyncState.NotSynced(TonKit.SyncError.NotStarted))
-    private val syncStateFlow = _syncStateFlow.asStateFlow()
+    val syncStateFlow = _syncStateFlow.asStateFlow()
 
     suspend fun sync() {
         Log.d("AAA", "Syncing account...")

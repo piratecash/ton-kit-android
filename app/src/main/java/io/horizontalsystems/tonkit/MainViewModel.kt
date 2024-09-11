@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.horizontalsystems.tonkit.core.TonKit
 import io.horizontalsystems.tonkit.core.TonKit.WalletType
+import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.SyncState
 import kotlinx.coroutines.Dispatchers
@@ -32,11 +33,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val address = tonKit.receiveAddress.toRaw()
 
-    private var balance = "tonKit.balance"
+    private var syncState = tonKit.syncStateFlow.value
+    private var account = tonKit.accountFlow.value
 
     var uiState by mutableStateOf(
         MainUiState(
-            balance = balance,
+            syncState = syncState,
+            account = account
         )
     )
         private set
@@ -46,7 +49,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch(Dispatchers.Default) {
-            tonKit.sync()
+            tonKit.syncStateFlow.collect(::updateSyncState)
+        }
+        viewModelScope.launch(Dispatchers.Default) {
+            tonKit.accountFlow.collect(::updateAccount)
         }
 
         refreshFee()
@@ -85,26 +91,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 //        }
 //    }
 
-//    private fun updateSyncState(syncState: SyncState) {
-//        this.syncState = syncState
-//
-//        emitState()
-//    }
+    private fun updateSyncState(syncState: SyncState) {
+        this.syncState = syncState
+
+        emitState()
+    }
+
+    private fun updateAccount(account: Account?) {
+        this.account = account
+
+        emitState()
+    }
 
     override fun onCleared() {
 //        tonKit.stop()
     }
 
-    private fun updateBalance(balance: String) {
-        this.balance = balance
-
-        emitState()
-    }
-
     private fun emitState() {
         viewModelScope.launch {
             uiState = MainUiState(
-                balance = balance,
+                syncState = syncState,
+                account = account,
             )
         }
     }
@@ -146,7 +153,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun start() {
-//        tonKit.start()
+        viewModelScope.launch(Dispatchers.Default) {
+            tonKit.sync()
+        }
     }
 
     fun stop() {
@@ -155,7 +164,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 }
 
 data class MainUiState(
-    val balance: String?,
+    val syncState: SyncState,
+    val account: Account?,
 )
 
 fun SyncState.toStr() = when (this) {
