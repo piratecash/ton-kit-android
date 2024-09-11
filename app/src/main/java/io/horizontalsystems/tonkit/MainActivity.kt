@@ -194,25 +194,32 @@ fun BalanceScreen(viewModel: MainViewModel, uiState: MainUiState) {
 
         Text("JETTONS")
         Spacer(modifier = Modifier.height(10.dp))
-        LazyColumn {
-            items(uiState.jettonBalanceMap.values.toList()) {
-                Card(modifier = Modifier.padding(bottom = 12.dp)) {
-                    Row(modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)) {
-                        GlideImage(
-                            modifier = Modifier.size(50.dp),
-                            model = it.jetton.image,
-                            contentDescription = "",
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Column {
-                            Text(it.jetton.symbol)
-                            Text(it.jetton.name)
+
+        Crossfade(uiState.jettonBalanceMap.isNotEmpty(), label = "") { isNotEmpty ->
+            if (isNotEmpty) {
+                LazyColumn {
+                    items(uiState.jettonBalanceMap.values.toList()) {
+                        Card(modifier = Modifier.padding(bottom = 12.dp)) {
+                            Row(modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)) {
+                                GlideImage(
+                                    modifier = Modifier.size(50.dp),
+                                    model = it.jetton.image,
+                                    contentDescription = "",
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(it.jetton.symbol)
+                                    Text(it.jetton.name)
+                                }
+                                Spacer(modifier = Modifier.weight(1f))
+                                val balance = it.balance.toBigDecimal(it.jetton.decimals).stripTrailingZeros()
+                                Text(balance.toPlainString())
+                            }
                         }
-                        Spacer(modifier = Modifier.weight(1f))
-                        val balance = it.balance.toBigDecimal(it.jetton.decimals).stripTrailingZeros()
-                        Text(balance.toPlainString())
                     }
                 }
+            } else {
+                Text("No jettons")
             }
         }
     }
