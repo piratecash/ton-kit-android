@@ -6,10 +6,15 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import io.horizontalsystems.tonkit.models.Account
+import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.JettonBalance
 
 @Database(
-    entities = [Account::class, JettonBalance::class],
+    entities = [
+        Account::class,
+        JettonBalance::class,
+        Event::class,
+    ],
     version = 1,
 )
 @TypeConverters(Converters::class)

@@ -1,6 +1,11 @@
 package io.horizontalsystems.tonkit.models
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity
 data class Event(
+    @PrimaryKey
     val id: String,
     val lt: Long,
     val timestamp: Long,
