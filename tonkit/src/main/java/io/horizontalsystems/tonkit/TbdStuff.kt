@@ -1,11 +1,14 @@
 package io.horizontalsystems.tonkit
 
-data class Address(val raw: String) {
-    fun toRaw() = raw
+import org.ton.block.AddrStd
+
+class Address(private val addrStd: AddrStd) {
+    fun toRaw() = addrStd.toString(userFriendly = false)
+    fun toUserFriendly() = addrStd.toString(userFriendly = true, bounceable = true)
 
     companion object {
         fun parse(addressStr: String): Address {
-            return Address(addressStr)
+            return Address(AddrStd(addressStr))
         }
     }
 }

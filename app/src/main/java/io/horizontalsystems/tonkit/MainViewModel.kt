@@ -31,7 +31,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         "watch"
     )
 
-    val address = tonKit.receiveAddress.toRaw()
+    val address = tonKit.receiveAddress.toUserFriendly()
 
     private var syncState = tonKit.syncStateFlow.value
     private var account = tonKit.accountFlow.value
