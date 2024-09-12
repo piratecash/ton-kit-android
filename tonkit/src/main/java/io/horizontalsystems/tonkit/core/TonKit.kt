@@ -87,5 +87,9 @@ class TonKit(
                 jettonManager
             )
         }
+
+        fun validateAddress(address: String) {
+            Address.parse(address)
+        }
     }
 }
