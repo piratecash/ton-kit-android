@@ -1,7 +1,9 @@
 package io.horizontalsystems.tonkit.models
 
+import androidx.room.Entity
 import io.horizontalsystems.tonkit.Address
 
+@Entity
 data class Tag(
     val eventId: String,
     val type: Type? = null,

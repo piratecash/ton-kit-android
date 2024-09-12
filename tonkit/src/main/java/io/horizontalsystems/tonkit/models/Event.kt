@@ -119,7 +119,9 @@ data class EventInfo(
     val initial: Boolean
 )
 
+@Entity
 data class EventSyncState(
+    @PrimaryKey
     val id: String,
     val allSynced: Boolean
 ) {

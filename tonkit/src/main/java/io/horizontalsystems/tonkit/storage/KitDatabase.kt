@@ -7,13 +7,17 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.Event
+import io.horizontalsystems.tonkit.models.EventSyncState
 import io.horizontalsystems.tonkit.models.JettonBalance
+import io.horizontalsystems.tonkit.models.Tag
 
 @Database(
     entities = [
         Account::class,
         JettonBalance::class,
         Event::class,
+        EventSyncState::class,
+        Tag::class,
     ],
     version = 1,
 )
@@ -21,6 +25,7 @@ import io.horizontalsystems.tonkit.models.JettonBalance
 abstract class KitDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
     abstract fun jettonDao(): JettonDao
+    abstract fun eventDao(): EventDao
 
     companion object {
         fun getInstance(context: Context, name: String): KitDatabase {
