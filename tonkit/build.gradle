@@ -5,6 +5,16 @@ plugins {
     id('maven-publish')
 }
 
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+            }
+        }
+    }
+}
+
 android {
     namespace 'io.horizontalsystems.tonkit'
     compileSdk 34
