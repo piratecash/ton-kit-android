@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace 'io.horizontalsystems.tonkit'
+    namespace 'io.horizontalsystems.tonkit.sample'
     compileSdk 34
 
     defaultConfig {

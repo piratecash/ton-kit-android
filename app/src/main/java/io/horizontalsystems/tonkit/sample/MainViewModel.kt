@@ -1,4 +1,4 @@
-package io.horizontalsystems.tonkit
+package io.horizontalsystems.tonkit.sample
 
 import android.app.Application
 import androidx.compose.runtime.getValue
@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.core.TonKit
 import io.horizontalsystems.tonkit.core.TonKit.WalletType
 import io.horizontalsystems.tonkit.models.Account

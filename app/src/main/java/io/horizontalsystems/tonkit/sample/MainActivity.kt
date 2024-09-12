@@ -1,4 +1,4 @@
-package io.horizontalsystems.tonkit
+package io.horizontalsystems.tonkit.sample
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import io.horizontalsystems.tonkit.ui.theme.TonkitadnroidTheme
+import io.horizontalsystems.tonkit.sample.theme.TonkitadnroidTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {

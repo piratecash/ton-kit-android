@@ -1,4 +1,4 @@
-package io.horizontalsystems.tonkit.ui.theme
+package io.horizontalsystems.tonkit.sample.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

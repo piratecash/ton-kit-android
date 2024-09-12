@@ -1,4 +1,4 @@
-package io.horizontalsystems.tonkit.ui.theme
+package io.horizontalsystems.tonkit.sample.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
