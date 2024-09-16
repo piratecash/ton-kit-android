@@ -17,39 +17,38 @@ data class Event(
 ) {
     fun tags(address: Address): List<Tag> {
         val tags = mutableListOf<Tag>()
+        for (action in actions) {
+            when (action.type) {
+                Action.Type.TonTransfer -> {
+                    val tonTransfer = action.tonTransfer ?: continue
 
-        actions.forEach { action ->
-            val actionType = action.type
-            when (actionType) {
-                is Action.Type.TonTransfer -> {
-                    val typedAction = actionType.action
-
-                    if (typedAction.sender.address == address) {
+                    if (tonTransfer.sender.address == address) {
                         tags.add(
                             Tag(
                                 id,
                                 Tag.Type.Outgoing,
                                 Tag.Platform.Native,
-                                addresses = listOf(typedAction.recipient.address)
+                                addresses = listOf(tonTransfer.recipient.address)
                             )
                         )
                     }
 
-                    if (typedAction.recipient.address == address) {
+                    if (tonTransfer.recipient.address == address) {
                         tags.add(
                             Tag(
                                 id,
                                 Tag.Type.Incoming,
                                 Tag.Platform.Native,
-                                addresses = listOf(typedAction.sender.address)
+                                addresses = listOf(tonTransfer.sender.address)
                             )
                         )
                     }
                 }
-                is Action.Type.JettonTransfer -> {
-                    val typedAction = actionType.action
-                    val sender = typedAction.sender
-                    val recipient = typedAction.recipient
+
+                Action.Type.JettonTransfer -> {
+                    val jettonTransfer = action.jettonTransfer ?: continue
+                    val sender = jettonTransfer.sender
+                    val recipient = jettonTransfer.recipient
 
                     if (sender?.address == address) {
                         tags.add(
@@ -57,7 +56,7 @@ data class Event(
                                 id,
                                 Tag.Type.Outgoing,
                                 Tag.Platform.Jetton,
-                                typedAction.jetton.address,
+                                jettonTransfer.jetton.address,
                                 listOfNotNull(recipient?.address)
                             )
                         )
@@ -69,42 +68,93 @@ data class Event(
                                 id,
                                 Tag.Type.Incoming,
                                 Tag.Platform.Jetton,
-                                typedAction.jetton.address,
+                                jettonTransfer.jetton.address,
                                 listOfNotNull(sender?.address)
                             )
                         )
                     }
                 }
-                is Action.Type.JettonBurn -> {
-                    val typedAction = actionType.action
+
+                Action.Type.JettonBurn -> {
+                    val jettonBurn = action.jettonBurn ?: continue
                     tags.add(
                         Tag(
                             id,
                             Tag.Type.Outgoing,
                             Tag.Platform.Jetton,
-                            typedAction.jetton.address,
+                            jettonBurn.jetton.address,
                             listOf()
                         )
                     )
                 }
-                is Action.Type.JettonMint -> {
-                    val typedAction = actionType.action
-                    tags.add(Tag(id, Tag.Type.Incoming, Tag.Platform.Jetton, typedAction.jetton.address, listOf()))
+
+                Action.Type.JettonMint -> {
+                    val jettonMint = action.jettonMint ?: continue
+                    tags.add(
+                        Tag(
+                            id,
+                            Tag.Type.Incoming,
+                            Tag.Platform.Jetton,
+                            jettonMint.jetton.address,
+                            listOf()
+                        )
+                    )
                 }
-                is Action.Type.JettonSwap -> {
-                    val typedAction = actionType.action
-                    typedAction.jettonMasterIn?.let { jetton ->
-                        tags.add(Tag(id, Tag.Type.Incoming, Tag.Platform.Jetton, jetton.address, listOf()))
-                        tags.add(Tag(id, Tag.Type.Swap, Tag.Platform.Jetton, jetton.address, listOf()))
+
+                Action.Type.JettonSwap -> {
+                    val jettonSwap = action.jettonSwap ?: continue
+                    jettonSwap.jettonMasterIn?.let { jetton ->
+                        tags.add(
+                            Tag(
+                                id,
+                                Tag.Type.Incoming,
+                                Tag.Platform.Jetton,
+                                jetton.address,
+                                listOf()
+                            )
+                        )
+                        tags.add(
+                            Tag(
+                                id,
+                                Tag.Type.Swap,
+                                Tag.Platform.Jetton,
+                                jetton.address,
+                                listOf()
+                            )
+                        )
                     }
-                    typedAction.jettonMasterIn?.let { jetton ->
-                        tags.add(Tag(id, Tag.Type.Outgoing, Tag.Platform.Jetton, jetton.address, listOf()))
-                        tags.add(Tag(id, Tag.Type.Swap, Tag.Platform.Jetton, jetton.address, listOf()))
+                    jettonSwap.jettonMasterOut?.let { jetton ->
+                        tags.add(
+                            Tag(
+                                id,
+                                Tag.Type.Outgoing,
+                                Tag.Platform.Jetton,
+                                jetton.address,
+                                listOf()
+                            )
+                        )
+                        tags.add(
+                            Tag(
+                                id,
+                                Tag.Type.Swap,
+                                Tag.Platform.Jetton,
+                                jetton.address,
+                                listOf()
+                            )
+                        )
                     }
                 }
-                is Action.Type.SmartContract -> {
-                    val typedAction = actionType.action
-                    tags.add(Tag(id, Tag.Type.Outgoing, Tag.Platform.Native, addresses = listOf(typedAction.contract.address)))
+
+                Action.Type.SmartContract -> {
+                    val smartContractExec = action.smartContractExec ?: continue
+                    tags.add(
+                        Tag(
+                            id,
+                            Tag.Type.Outgoing,
+                            Tag.Platform.Native,
+                            addresses = listOf(smartContractExec.contract.address)
+                        )
+                    )
                 }
                 else -> Unit
             }

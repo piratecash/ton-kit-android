@@ -39,6 +39,7 @@ enum class JettonVerificationType(val value: String) {
             io.tonapi.models.JettonVerificationType.whitelist -> WHITELIST
             io.tonapi.models.JettonVerificationType.blacklist -> BLACKLIST
             io.tonapi.models.JettonVerificationType.none -> NONE
+            else -> throw IllegalArgumentException()
         }
     }
 }

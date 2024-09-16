@@ -3,126 +3,37 @@ package io.horizontalsystems.tonkit.models
 import io.horizontalsystems.tonkit.Address
 import java.math.BigInteger
 
-data class Action(val type: Type, val status: Status) {
-
-    sealed class Type {
-        data class TonTransfer(val action: Action.TonTransfer) : Type()
-        data class JettonTransfer(val action: Action.JettonTransfer) : Type()
-        data class JettonBurn(val action: Action.JettonBurn) : Type()
-        data class JettonMint(val action: Action.JettonMint) : Type()
-        data class ContractDeploy(val action: Action.ContractDeploy) : Type()
-        data class JettonSwap(val action: Action.JettonSwap) : Type()
-        data class SmartContract(val action: Action.SmartContract) : Type()
-        data class Unknown(val rawType: String) : Type()
+data class Action(
+    val type: Type,
+    val status: Status,
+    val tonTransfer: TonTransfer?,
+    val jettonTransfer: JettonTransfer?,
+    val jettonBurn: JettonBurn?,
+    val jettonMint: JettonMint?,
+    val contractDeploy: ContractDeploy?,
+    val jettonSwap: JettonSwap?,
+    val smartContractExec: SmartContractExec?
+) {
+    enum class Type {
+        TonTransfer,
+        JettonTransfer,
+        JettonBurn,
+        JettonMint,
+        ContractDeploy,
+        JettonSwap,
+        SmartContract,
+        Unknown;
 
         companion object {
-            fun fromApi(action: io.tonapi.models.Action): Type {
-                val type = when (action.type) {
-                    io.tonapi.models.Action.Type.TonTransfer -> {
-                        action.tonTransfer?.let {
-                            TonTransfer(
-                                TonTransfer(
-                                    sender = AccountAddress.fromApi(it.sender),
-                                    recipient = AccountAddress.fromApi(it.recipient),
-                                    amount = BigInteger.valueOf(it.amount),
-                                    comment = it.comment,
-                                )
-                            )
-                        }
-                    }
-
-                    io.tonapi.models.Action.Type.JettonTransfer -> {
-                        action.jettonTransfer?.let { jt ->
-                            JettonTransfer(
-                                JettonTransfer(
-                                    sender = jt.sender?.let { AccountAddress.fromApi(it) },
-                                    recipient = jt.recipient?.let { AccountAddress.fromApi(it) },
-                                    sendersWallet = Address.parse(jt.sendersWallet),
-                                    recipientsWallet = Address.parse(jt.recipientsWallet),
-                                    amount = BigInteger(jt.amount),
-                                    comment = jt.comment,
-                                    jetton = Jetton.fromPreview(jt.jetton)
-                                )
-                            )
-                        }
-                    }
-
-                    io.tonapi.models.Action.Type.JettonBurn -> {
-                        action.jettonBurn?.let { jb ->
-                            JettonBurn(
-                                JettonBurn(
-                                    sender = AccountAddress.fromApi(jb.sender),
-                                    sendersWallet = Address.parse(jb.sendersWallet),
-                                    amount = BigInteger(jb.amount),
-                                    jetton = Jetton.fromPreview(jb.jetton)
-                                )
-                            )
-                        }
-                    }
-
-                    io.tonapi.models.Action.Type.JettonMint -> {
-                        action.jettonMint?.let { jm ->
-                            JettonMint(
-                                JettonMint(
-                                    recipient = AccountAddress.fromApi(jm.recipient),
-                                    recipientsWallet = Address.parse(jm.recipientsWallet),
-                                    amount = BigInteger(jm.amount),
-                                    jetton = Jetton.fromPreview(jm.jetton)
-                                )
-                            )
-                        }
-                    }
-
-                    io.tonapi.models.Action.Type.ContractDeploy -> {
-                        action.contractDeploy?.let { cd ->
-                            ContractDeploy(
-                                ContractDeploy(
-                                    address = Address.parse(cd.address),
-                                    interfaces = cd.interfaces,
-                                )
-                            )
-                        }
-                    }
-
-                    io.tonapi.models.Action.Type.JettonSwap -> {
-                        action.jettonSwap?.let { js ->
-                            JettonSwap(
-                                JettonSwap(
-                                    dex = js.dex.value,
-                                    amountIn = BigInteger(js.amountIn),
-                                    amountOut = BigInteger(js.amountOut),
-                                    tonIn = js.tonIn?.let { BigInteger.valueOf(it) },
-                                    tonOut = js.tonOut?.let { BigInteger.valueOf(it) },
-                                    userWallet = AccountAddress.fromApi(js.userWallet),
-                                    router = AccountAddress.fromApi(js.router),
-                                    jettonMasterIn = js.jettonMasterIn?.let { Jetton.fromPreview(it) },
-                                    jettonMasterOut = js.jettonMasterOut?.let {
-                                        Jetton.fromPreview(
-                                            it
-                                        )
-                                    },
-                                )
-                            )
-                        }
-                    }
-
-                    io.tonapi.models.Action.Type.SmartContractExec -> {
-                        action.smartContractExec?.let { sc ->
-                            SmartContract(
-                                SmartContract(
-                                    contract = AccountAddress.fromApi(sc.contract),
-                                    tonAttached = BigInteger.valueOf(sc.tonAttached),
-                                    operation = sc.operation,
-                                    payload = sc.payload
-                                )
-                            )
-                        }
-                    }
-
-                    else -> null
-                }
-
-                return type ?: Unknown(action.type.value)
+            fun fromApi(type: io.tonapi.models.Action.Type) = when (type) {
+                io.tonapi.models.Action.Type.TonTransfer -> TonTransfer
+                io.tonapi.models.Action.Type.JettonTransfer -> JettonTransfer
+                io.tonapi.models.Action.Type.JettonBurn -> JettonBurn
+                io.tonapi.models.Action.Type.JettonMint -> JettonMint
+                io.tonapi.models.Action.Type.ContractDeploy -> ContractDeploy
+                io.tonapi.models.Action.Type.JettonSwap -> JettonSwap
+                io.tonapi.models.Action.Type.SmartContractExec -> SmartContract
+                else -> Unknown
             }
         }
     }
@@ -135,63 +46,147 @@ data class Action(val type: Type, val status: Status) {
             fun fromApi(status: io.tonapi.models.Action.Status) = when (status) {
                 io.tonapi.models.Action.Status.ok -> OK
                 io.tonapi.models.Action.Status.failed -> FAILED
+                else -> throw IllegalArgumentException()
             }
         }
     }
 
-    data class TonTransfer(
-        val sender: AccountAddress,
-        val recipient: AccountAddress,
-        val amount: BigInteger,
-        val comment: String?,
-    )
+    companion object {
+        fun fromApi(action: io.tonapi.models.Action): Action {
+            val tonTransfer = action.tonTransfer?.let {
+                TonTransfer(
+                    sender = AccountAddress.fromApi(it.sender),
+                    recipient = AccountAddress.fromApi(it.recipient),
+                    amount = BigInteger.valueOf(it.amount),
+                    comment = it.comment,
+                )
+            }
+            val jettonTransfer = action.jettonTransfer?.let { jt ->
+                JettonTransfer(
+                    sender = jt.sender?.let { AccountAddress.fromApi(it) },
+                    recipient = jt.recipient?.let { AccountAddress.fromApi(it) },
+                    sendersWallet = Address.parse(jt.sendersWallet),
+                    recipientsWallet = Address.parse(jt.recipientsWallet),
+                    amount = BigInteger(jt.amount),
+                    comment = jt.comment,
+                    jetton = Jetton.fromPreview(jt.jetton)
+                )
+            }
+            val jettonBurn = action.jettonBurn?.let { jb ->
+                JettonBurn(
+                    sender = AccountAddress.fromApi(jb.sender),
+                    sendersWallet = Address.parse(jb.sendersWallet),
+                    amount = BigInteger(jb.amount),
+                    jetton = Jetton.fromPreview(jb.jetton)
+                )
+            }
+            val jettonMint = action.jettonMint?.let { jm ->
+                JettonMint(
+                    recipient = AccountAddress.fromApi(jm.recipient),
+                    recipientsWallet = Address.parse(jm.recipientsWallet),
+                    amount = BigInteger(jm.amount),
+                    jetton = Jetton.fromPreview(jm.jetton)
+                )
+            }
+            val contractDeploy = action.contractDeploy?.let { cd ->
+                ContractDeploy(
+                    address = Address.parse(cd.address),
+                    interfaces = cd.interfaces,
+                )
+            }
+            val jettonSwap = action.jettonSwap?.let { js ->
+                JettonSwap(
+                    dex = js.dex.value,
+                    amountIn = js.amountIn.toBigIntegerOrNull() ?: BigInteger.ZERO,
+                    amountOut = js.amountOut.toBigIntegerOrNull()
+                        ?: BigInteger.ZERO,
+                    tonIn = js.tonIn?.let { BigInteger.valueOf(it) },
+                    tonOut = js.tonOut?.let { BigInteger.valueOf(it) },
+                    userWallet = AccountAddress.fromApi(js.userWallet),
+                    router = AccountAddress.fromApi(js.router),
+                    jettonMasterIn = js.jettonMasterIn?.let { Jetton.fromPreview(it) },
+                    jettonMasterOut = js.jettonMasterOut?.let {
+                        Jetton.fromPreview(
+                            it
+                        )
+                    },
+                )
+            }
+            val smartContractExec = action.smartContractExec?.let { sc ->
+                SmartContractExec(
+                    contract = AccountAddress.fromApi(sc.contract),
+                    tonAttached = BigInteger.valueOf(sc.tonAttached),
+                    operation = sc.operation,
+                    payload = sc.payload
+                )
+            }
 
-    data class JettonTransfer(
-        val sender: AccountAddress?,
-        val recipient: AccountAddress?,
-        val sendersWallet: Address,
-        val recipientsWallet: Address,
-        val amount: BigInteger,
-        val comment: String?,
-        val jetton: Jetton,
-    )
-
-    data class JettonBurn(
-        val sender: AccountAddress,
-        val sendersWallet: Address,
-        val amount: BigInteger,
-        val jetton: Jetton,
-    )
-
-    data class JettonMint(
-        val recipient: AccountAddress,
-        val recipientsWallet: Address,
-        val amount: BigInteger,
-        val jetton: Jetton,
-    )
-
-    data class ContractDeploy(
-        val address: Address,
-        val interfaces: List<String>,
-    )
-
-    data class JettonSwap(
-        val dex: String,
-        val amountIn: BigInteger,
-        val amountOut: BigInteger,
-        val tonIn: BigInteger?,
-        val tonOut: BigInteger?,
-        val userWallet: AccountAddress,
-        val router: AccountAddress,
-        val jettonMasterIn: Jetton?,
-        val jettonMasterOut: Jetton?,
-    )
-
-    data class SmartContract(
-        val contract: AccountAddress,
-        val tonAttached: BigInteger,
-        val operation: String,
-        val payload: String?,
-    )
-
+            return Action(
+                Type.fromApi(action.type),
+                Status.fromApi(action.status),
+                tonTransfer,
+                jettonTransfer,
+                jettonBurn,
+                jettonMint,
+                contractDeploy,
+                jettonSwap,
+                smartContractExec
+            )
+        }
+    }
 }
+
+data class TonTransfer(
+    val sender: AccountAddress,
+    val recipient: AccountAddress,
+    val amount: BigInteger,
+    val comment: String?,
+)
+
+data class JettonTransfer(
+    val sender: AccountAddress?,
+    val recipient: AccountAddress?,
+    val sendersWallet: Address,
+    val recipientsWallet: Address,
+    val amount: BigInteger,
+    val comment: String?,
+    val jetton: Jetton,
+)
+
+data class JettonBurn(
+    val sender: AccountAddress,
+    val sendersWallet: Address,
+    val amount: BigInteger,
+    val jetton: Jetton,
+)
+
+data class JettonMint(
+    val recipient: AccountAddress,
+    val recipientsWallet: Address,
+    val amount: BigInteger,
+    val jetton: Jetton,
+)
+
+data class ContractDeploy(
+    val address: Address,
+    val interfaces: List<String>,
+)
+
+data class JettonSwap(
+    val dex: String,
+    val amountIn: BigInteger,
+    val amountOut: BigInteger,
+    val tonIn: BigInteger?,
+    val tonOut: BigInteger?,
+    val userWallet: AccountAddress,
+    val router: AccountAddress,
+    val jettonMasterIn: Jetton?,
+    val jettonMasterOut: Jetton?,
+)
+
+data class SmartContractExec(
+    val contract: AccountAddress,
+    val tonAttached: BigInteger,
+    val operation: String,
+    val payload: String?,
+)

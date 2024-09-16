@@ -177,6 +177,7 @@ fun BalanceScreen(viewModel: MainViewModel, uiState: MainUiState) {
         Text(text = "Account Status: ${uiState.account?.status}")
         Text(text = "Sync State: ${uiState.syncState.description}")
         Text(text = "Jetton Sync State: ${uiState.jettonSyncState.description}")
+        Text(text = "Event Sync State: ${uiState.eventSyncState.description}")
 
         Spacer(modifier = Modifier.height(20.dp))
 

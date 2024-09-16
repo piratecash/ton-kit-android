@@ -12,6 +12,7 @@ enum class AccountStatus(val value: kotlin.String) {
             io.tonapi.models.AccountStatus.uninit -> UNINIT
             io.tonapi.models.AccountStatus.active -> ACTIVE
             io.tonapi.models.AccountStatus.frozen -> FROZEN
+            else -> throw IllegalArgumentException()
         }
     }
 }

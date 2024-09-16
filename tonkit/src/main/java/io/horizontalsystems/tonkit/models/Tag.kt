@@ -1,6 +1,7 @@
 package io.horizontalsystems.tonkit.models
 
 import androidx.room.Entity
+import androidx.room.PrimaryKey
 import io.horizontalsystems.tonkit.Address
 
 @Entity
@@ -10,6 +11,8 @@ data class Tag(
     val platform: Platform? = null,
     val jettonAddress: Address? = null,
     val addresses: List<Address>,
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0
 ) {
     enum class Platform {
         Native, Jetton;

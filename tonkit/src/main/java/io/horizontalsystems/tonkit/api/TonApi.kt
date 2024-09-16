@@ -8,13 +8,17 @@ import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.JettonBalance
 import io.horizontalsystems.tonkit.models.Network
-import io.horizontalsystems.tonkit.models.Network.*
+import io.horizontalsystems.tonkit.models.Network.MainNet
+import io.horizontalsystems.tonkit.models.Network.TestNet
 import io.tonapi.apis.AccountsApi
 import io.tonapi.apis.BlockchainApi
 import io.tonapi.apis.EmulationApi
 import io.tonapi.apis.JettonsApi
 import io.tonapi.apis.LiteServerApi
 import io.tonapi.apis.WalletApi
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.logging.HttpLoggingInterceptor.Level
 import java.math.BigInteger
 
 class TonApi(network: Network) : IApi {
@@ -23,12 +27,20 @@ class TonApi(network: Network) : IApi {
         TestNet -> "https://testnet.tonapi.io"
     }
 
-    private val accountsApi = AccountsApi(basePath)
-    private val walletApi = WalletApi(basePath)
-    private val jettonsApi = JettonsApi(basePath)
-    private val liteServerApi = LiteServerApi(basePath)
-    private val emulationApi = EmulationApi(basePath)
-    private val blockchainApi = BlockchainApi(basePath)
+    private val okHttpClient: OkHttpClient by lazy {
+        val logging = HttpLoggingInterceptor()
+        logging.level = Level.BASIC
+        OkHttpClient.Builder()
+            .addInterceptor(logging)
+            .build()
+    }
+
+    private val accountsApi = AccountsApi(basePath, okHttpClient)
+    private val walletApi = WalletApi(basePath, okHttpClient)
+    private val jettonsApi = JettonsApi(basePath, okHttpClient)
+    private val liteServerApi = LiteServerApi(basePath, okHttpClient)
+    private val emulationApi = EmulationApi(basePath, okHttpClient)
+    private val blockchainApi = BlockchainApi(basePath, okHttpClient)
 
     override suspend fun getAccount(address: Address): Account {
         val account = accountsApi.getAccount(address.toRaw())
@@ -74,10 +86,7 @@ class TonApi(network: Network) : IApi {
                 event.inProgress,
                 event.extra,
                 event.actions.map { action ->
-                    Action(
-                        Action.Type.fromApi(action),
-                        Action.Status.fromApi(action.status),
-                    )
+                    Action.fromApi(action)
                 }
             )
         }

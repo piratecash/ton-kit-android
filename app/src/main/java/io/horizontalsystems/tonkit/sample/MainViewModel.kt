@@ -19,10 +19,9 @@ import java.math.BigDecimal
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val words = "used ugly meat glad balance divorce inner artwork hire invest already piano".split(" ")
-    private val watchAddress = "UQBpAeJL-VSLCigCsrgGQHCLeiEBdAuZBlbrrUGI4BVQJoPM"
 
-    //    private val walletType = WalletType.Watch("UQBpAeJL-VSLCigCsrgGQHCLeiEBdAuZBlbrrUGI4BVQJoPM")
-    private val walletType = WalletType.Mnemonic(words, "")
+    private val walletType = WalletType.Watch("UQBpAeJL-VSLCigCsrgGQHCLeiEBdAuZBlbrrUGI4BVQJoPM")
+//    private val walletType = WalletType.Mnemonic(words, "")
     private val tonKit = TonKit.getInstance(
         walletType,
         Network.MainNet,
@@ -36,11 +35,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var account = tonKit.accountFlow.value
     private var jettonSyncState = tonKit.jettonSyncStateFlow.value
     private var jettonBalanceMap = tonKit.jettonBalanceMapFlow.value
+    private var eventSyncState = tonKit.eventSyncStateFlow.value
 
     var uiState by mutableStateOf(
         MainUiState(
             syncState = syncState,
             jettonSyncState = jettonSyncState,
+            eventSyncState = eventSyncState,
             account = account,
             jettonBalanceMap = jettonBalanceMap,
         )
@@ -61,7 +62,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             tonKit.jettonSyncStateFlow.collect(::updateJettonSyncState)
         }
         viewModelScope.launch(Dispatchers.Default) {
-            tonKit.jettonBalanceMapFlow.collect { updateJettonBalanceMap(it) }
+            tonKit.jettonBalanceMapFlow.collect(::updateJettonBalanceMap)
+        }
+        viewModelScope.launch(Dispatchers.Default) {
+            tonKit.eventSyncStateFlow.collect(::updateEventSyncState)
         }
 
         refreshFee()
@@ -112,6 +116,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         emitState()
     }
 
+    private fun updateEventSyncState(syncState: SyncState) {
+        this.eventSyncState = syncState
+
+        emitState()
+    }
+
     private fun updateJettonBalanceMap(jettonBalanceMap: Map<Address, JettonBalance>) {
         this.jettonBalanceMap = jettonBalanceMap
 
@@ -133,6 +143,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             uiState = MainUiState(
                 syncState = syncState,
                 jettonSyncState = jettonSyncState,
+                eventSyncState = eventSyncState,
                 account = account,
                 jettonBalanceMap = jettonBalanceMap,
             )
@@ -189,6 +200,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 data class MainUiState(
     val syncState: SyncState,
     val jettonSyncState: SyncState,
+    val eventSyncState: SyncState,
     val account: Account?,
     val jettonBalanceMap: Map<Address, JettonBalance>,
 )
