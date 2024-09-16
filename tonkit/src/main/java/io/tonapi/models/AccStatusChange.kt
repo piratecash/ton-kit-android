@@ -35,7 +35,10 @@ enum class AccStatusChange(val value: kotlin.String) {
     frozen("acst_frozen"),
 
     @Json(name = "acst_deleted")
-    deleted("acst_deleted");
+    deleted("acst_deleted"),
+
+    @Json(name = "unknown_default_open_api")
+    unknown_default_open_api("unknown_default_open_api");
 
     /**
      * Override [toString()] to avoid using the enum variable name as the value, and instead use

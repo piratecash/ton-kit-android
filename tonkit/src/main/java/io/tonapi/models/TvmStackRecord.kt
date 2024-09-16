@@ -60,7 +60,8 @@ data class TvmStackRecord (
         @Json(name = "num") num("num"),
         @Json(name = "nan") nan("nan"),
         @Json(name = "null") `null`("null"),
-        @Json(name = "tuple") tuple("tuple");
+        @Json(name = "tuple") tuple("tuple"),
+        @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
 
 }

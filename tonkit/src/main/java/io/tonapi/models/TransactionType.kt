@@ -47,7 +47,10 @@ enum class TransactionType(val value: kotlin.String) {
     TransMergeInstall("TransMergeInstall"),
 
     @Json(name = "TransStorage")
-    TransStorage("TransStorage");
+    TransStorage("TransStorage"),
+
+    @Json(name = "unknown_default_open_api")
+    unknown_default_open_api("unknown_default_open_api");
 
     /**
      * Override [toString()] to avoid using the enum variable name as the value, and instead use

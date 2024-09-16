@@ -35,7 +35,10 @@ enum class ComputeSkipReason(val value: kotlin.String) {
     bad_state("cskip_bad_state"),
 
     @Json(name = "cskip_no_gas")
-    no_gas("cskip_no_gas");
+    no_gas("cskip_no_gas"),
+
+    @Json(name = "unknown_default_open_api")
+    unknown_default_open_api("unknown_default_open_api");
 
     /**
      * Override [toString()] to avoid using the enum variable name as the value, and instead use

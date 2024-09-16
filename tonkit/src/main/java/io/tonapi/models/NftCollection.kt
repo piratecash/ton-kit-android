@@ -15,9 +15,6 @@
 
 package io.tonapi.models
 
-import io.tonapi.models.AccountAddress
-import io.tonapi.models.ImagePreview
-
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -68,7 +65,8 @@ data class NftCollection (
     enum class ApprovedBy(val value: kotlin.String) {
         @Json(name = "getgems") getgems("getgems"),
         @Json(name = "tonkeeper") tonkeeper("tonkeeper"),
-        @Json(name = "ton.diamonds") tonPeriodDiamonds("ton.diamonds");
+        @Json(name = "ton.diamonds") tonPeriodDiamonds("ton.diamonds"),
+        @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
 
 }

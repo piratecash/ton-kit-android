@@ -15,9 +15,6 @@
 
 package io.tonapi.models
 
-import io.tonapi.models.AccountAddress
-import io.tonapi.models.StateInit
-
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -113,7 +110,8 @@ data class Message (
     enum class MsgType(val value: kotlin.String) {
         @Json(name = "int_msg") int_msg("int_msg"),
         @Json(name = "ext_in_msg") ext_in_msg("ext_in_msg"),
-        @Json(name = "ext_out_msg") ext_out_msg("ext_out_msg");
+        @Json(name = "ext_out_msg") ext_out_msg("ext_out_msg"),
+        @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
 
 }

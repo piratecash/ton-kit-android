@@ -15,8 +15,6 @@
 
 package io.tonapi.models
 
-import io.tonapi.models.BlockchainAccountInspectMethodsInner
-
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -53,7 +51,8 @@ data class BlockchainAccountInspect (
      */
     @JsonClass(generateAdapter = false)
     enum class Compiler(val value: kotlin.String) {
-        @Json(name = "func") func("func");
+        @Json(name = "func") func("func"),
+        @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
 
 }

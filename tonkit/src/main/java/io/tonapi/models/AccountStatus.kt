@@ -37,8 +37,10 @@ enum class AccountStatus(val value: kotlin.String) {
     @Json(name = "active")
     active("active"),
 
-    @Json(name = "frozen")
-    frozen("frozen");
+    @Json(name = "frozen") frozen("frozen"),
+
+    @Json(name = "unknown_default_open_api")
+    unknown_default_open_api("unknown_default_open_api");
 
     /**
      * Override [toString()] to avoid using the enum variable name as the value, and instead use

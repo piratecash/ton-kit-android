@@ -15,28 +15,6 @@
 
 package io.tonapi.models
 
-import io.tonapi.models.ActionSimplePreview
-import io.tonapi.models.AuctionBidAction
-import io.tonapi.models.ContractDeployAction
-import io.tonapi.models.DepositStakeAction
-import io.tonapi.models.DomainRenewAction
-import io.tonapi.models.ElectionsDepositStakeAction
-import io.tonapi.models.ElectionsRecoverStakeAction
-import io.tonapi.models.InscriptionMintAction
-import io.tonapi.models.InscriptionTransferAction
-import io.tonapi.models.JettonBurnAction
-import io.tonapi.models.JettonMintAction
-import io.tonapi.models.JettonSwapAction
-import io.tonapi.models.JettonTransferAction
-import io.tonapi.models.NftItemTransferAction
-import io.tonapi.models.NftPurchaseAction
-import io.tonapi.models.SmartContractAction
-import io.tonapi.models.SubscriptionAction
-import io.tonapi.models.TonTransferAction
-import io.tonapi.models.UnSubscriptionAction
-import io.tonapi.models.WithdrawStakeAction
-import io.tonapi.models.WithdrawStakeRequestAction
-
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -173,7 +151,8 @@ data class Action (
         @Json(name = "DomainRenew") DomainRenew("DomainRenew"),
         @Json(name = "InscriptionTransfer") InscriptionTransfer("InscriptionTransfer"),
         @Json(name = "InscriptionMint") InscriptionMint("InscriptionMint"),
-        @Json(name = "Unknown") Unknown("Unknown");
+        @Json(name = "Unknown") Unknown("Unknown"),
+        @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
     /**
      * 
@@ -183,7 +162,8 @@ data class Action (
     @JsonClass(generateAdapter = false)
     enum class Status(val value: kotlin.String) {
         @Json(name = "ok") ok("ok"),
-        @Json(name = "failed") failed("failed");
+        @Json(name = "failed") failed("failed"),
+        @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
 
 }

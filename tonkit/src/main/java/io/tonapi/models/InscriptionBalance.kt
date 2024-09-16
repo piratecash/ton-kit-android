@@ -53,7 +53,8 @@ data class InscriptionBalance (
     @JsonClass(generateAdapter = false)
     enum class Type(val value: kotlin.String) {
         @Json(name = "ton20") ton20("ton20"),
-        @Json(name = "gram20") gram20("gram20");
+        @Json(name = "gram20") gram20("gram20"),
+        @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
 
 }

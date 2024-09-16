@@ -15,9 +15,6 @@
 
 package io.tonapi.models
 
-import io.tonapi.models.AccountAddress
-import io.tonapi.models.JettonPreview
-
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -76,7 +73,8 @@ data class JettonSwapAction (
     enum class Dex(val value: kotlin.String) {
         @Json(name = "stonfi") stonfi("stonfi"),
         @Json(name = "dedust") dedust("dedust"),
-        @Json(name = "megatonfi") megatonfi("megatonfi");
+        @Json(name = "megatonfi") megatonfi("megatonfi"),
+        @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
 
 }

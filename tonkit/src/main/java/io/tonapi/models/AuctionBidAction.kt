@@ -15,10 +15,6 @@
 
 package io.tonapi.models
 
-import io.tonapi.models.AccountAddress
-import io.tonapi.models.NftItem
-import io.tonapi.models.Price
-
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
@@ -62,7 +58,8 @@ data class AuctionBidAction (
         @Json(name = "DNS.ton") DNSPeriodTon("DNS.ton"),
         @Json(name = "DNS.tg") DNSPeriodTg("DNS.tg"),
         @Json(name = "NUMBER.tg") NUMBERPeriodTg("NUMBER.tg"),
-        @Json(name = "getgems") getgems("getgems");
+        @Json(name = "getgems") getgems("getgems"),
+        @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
 
 }

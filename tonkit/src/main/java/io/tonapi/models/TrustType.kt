@@ -38,7 +38,10 @@ enum class TrustType(val value: kotlin.String) {
     blacklist("blacklist"),
 
     @Json(name = "none")
-    none("none");
+    none("none"),
+
+    @Json(name = "unknown_default_open_api")
+    unknown_default_open_api("unknown_default_open_api");
 
     /**
      * Override [toString()] to avoid using the enum variable name as the value, and instead use
