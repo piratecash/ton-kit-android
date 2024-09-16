@@ -10,9 +10,11 @@ import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.core.TonKit
 import io.horizontalsystems.tonkit.core.TonKit.WalletType
 import io.horizontalsystems.tonkit.models.Account
+import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.JettonBalance
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.SyncState
+import io.horizontalsystems.tonkit.models.TagQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -36,6 +38,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var jettonSyncState = tonKit.jettonSyncStateFlow.value
     private var jettonBalanceMap = tonKit.jettonBalanceMapFlow.value
     private var eventSyncState = tonKit.eventSyncStateFlow.value
+    private var events: List<Event>? = null
 
     var uiState by mutableStateOf(
         MainUiState(
@@ -44,6 +47,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             eventSyncState = eventSyncState,
             account = account,
             jettonBalanceMap = jettonBalanceMap,
+            events = events
         )
     )
         private set
@@ -67,8 +71,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.Default) {
             tonKit.eventSyncStateFlow.collect(::updateEventSyncState)
         }
+        val tagQuery = TagQuery(null, null, null, null)
+        viewModelScope.launch(Dispatchers.Default) {
+            val eventFlow = tonKit.eventFlow(tagQuery)
+            eventFlow.collect {
+                it.events
+            }
+        }
 
         refreshFee()
+
+        events = tonKit.events(tagQuery)
+        emitState()
+
 
 //        viewModelScope.launch(Dispatchers.IO) {
 //            tonKit.newTransactionsFlow.collect {
@@ -146,6 +161,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 eventSyncState = eventSyncState,
                 account = account,
                 jettonBalanceMap = jettonBalanceMap,
+                events = events,
             )
         }
     }
@@ -203,6 +219,7 @@ data class MainUiState(
     val eventSyncState: SyncState,
     val account: Account?,
     val jettonBalanceMap: Map<Address, JettonBalance>,
+    val events: List<Event>?,
 )
 
 fun SyncState.toStr() = when (this) {

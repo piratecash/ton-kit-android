@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Page {
-    Balance, Transactions, Send
+    Balance, Events, Send
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -90,12 +90,8 @@ fun MainScreen() {
                         BalanceScreen(viewModel, uiState)
                     }
 
-                    Page.Transactions -> {
-//                        uiState.transactionList?.let { transactionList ->
-//                            Transactions(transactionList) {
-//                                viewModel.loadNextTransactionsPage()
-//                            }
-//                        }
+                    Page.Events -> {
+                        Events(viewModel, uiState)
                     }
 
                     Page.Send -> {
