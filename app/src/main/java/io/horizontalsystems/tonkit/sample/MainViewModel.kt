@@ -31,7 +31,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         "wallet-${walletType.javaClass.simpleName}"
     )
 
-    val address = tonKit.receiveAddress.toUserFriendly()
+    val address = tonKit.receiveAddress.toUserFriendly(false)
 
     private var syncState = tonKit.syncStateFlow.value
     private var account = tonKit.accountFlow.value
