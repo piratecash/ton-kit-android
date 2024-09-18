@@ -9,6 +9,9 @@ import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.TagQuery
 import io.horizontalsystems.tonkit.models.TagToken
 import io.horizontalsystems.tonkit.storage.KitDatabase
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import org.ton.api.pk.PrivateKeyEd25519
 import org.ton.contract.wallet.WalletV4R2Contract
@@ -40,10 +43,18 @@ class TonKit(
         return eventManager.tagTokens()
     }
 
-    suspend fun sync() {
-        accountManager.sync()
-        jettonManager.sync()
-        eventManager.sync()
+    suspend fun sync() = coroutineScope {
+        listOf(
+            async {
+                accountManager.sync()
+            },
+            async {
+                jettonManager.sync()
+            },
+            async {
+                eventManager.sync()
+            },
+        ).awaitAll()
     }
 
     sealed class WalletType {
