@@ -16,6 +16,7 @@ import io.tonapi.apis.EmulationApi
 import io.tonapi.apis.JettonsApi
 import io.tonapi.apis.LiteServerApi
 import io.tonapi.apis.WalletApi
+import io.tonapi.models.EmulateMessageToWalletRequest
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level
@@ -106,9 +107,9 @@ class TonApi(network: Network) : IApi {
     }
 
     override suspend fun estimateFee(boc: String): BigInteger {
-        TODO()
-//        val result = emulationApi.emulateMessageToWallet(boc)
-//        return BigInteger.valueOf(result.trace.transaction.totalFees)
+        val request = EmulateMessageToWalletRequest(boc)
+        val result = emulationApi.emulateMessageToWallet(request)
+        return BigInteger.valueOf(result.trace.transaction.totalFees)
     }
 
     override suspend fun send(boc: String) {

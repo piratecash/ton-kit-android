@@ -1,7 +1,9 @@
 package io.horizontalsystems.tonkit.core
 
 import android.content.Context
+import com.tonapps.blockchain.ton.contract.WalletV4R2Contract
 import io.horizontalsystems.tonkit.Address
+import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.EventInfo
@@ -14,14 +16,15 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import org.ton.api.pk.PrivateKeyEd25519
-import org.ton.contract.wallet.WalletV4R2Contract
 import org.ton.mnemonic.Mnemonic
+import java.math.BigInteger
 
 class TonKit(
     private val address: Address,
     private val accountManager: AccountManager,
     private val jettonManager: JettonManager,
     private val eventManager: EventManager,
+    private val transactionSender: TransactionSender?,
 ) {
     val receiveAddress get() = address
 
@@ -41,6 +44,12 @@ class TonKit(
 
     fun tagTokens(): List<TagToken> {
         return eventManager.tagTokens()
+    }
+
+    suspend fun estimateFee(recipient: FriendlyAddress, amount: SendAmount, comment: String?) : BigInteger {
+        transactionSender?.let {
+            return transactionSender.estimateFee(recipient, amount, comment)
+        } ?: throw WalletError.WatchOnly
     }
 
     suspend fun sync() = coroutineScope {
@@ -75,9 +84,9 @@ class TonKit(
         }
     }
 
-//    enum WalletError: Error {
-//        case watchOnly
-//    }
+    sealed class WalletError : Error() {
+        data object WatchOnly : WalletError()
+    }
 
 //    enum SendAmount {
 //        case amount(value: BigUInt)
@@ -98,12 +107,18 @@ class TonKit(
                 is WalletType.Mnemonic -> {
                     val seed = Mnemonic.toSeed(type.words, type.passphrase)
                     privateKey = PrivateKeyEd25519(seed)
-                    address = Address(WalletV4R2Contract.address(privateKey, 0))
+
+                    val walletV4R2Contract = WalletV4R2Contract(publicKey = privateKey.publicKey())
+
+                    address = Address(walletV4R2Contract.address)
                 }
 
                 is WalletType.Seed -> {
                     privateKey = PrivateKeyEd25519(type.seed)
-                    address = Address(WalletV4R2Contract.address(privateKey, 0))
+
+                    val walletV4R2Contract = WalletV4R2Contract(publicKey = privateKey.publicKey())
+
+                    address = Address(walletV4R2Contract.address)
                 }
 
                 is WalletType.Watch -> {
@@ -120,11 +135,16 @@ class TonKit(
             val jettonManager = JettonManager(address, api, database.jettonDao())
             val eventManager = EventManager(address, api, database.eventDao())
 
+            val transactionSender = privateKey?.let {
+                TransactionSender(api, address, privateKey)
+            }
+
             return TonKit(
                 address,
                 accountManager,
                 jettonManager,
-                eventManager
+                eventManager,
+                transactionSender
             )
         }
 
@@ -132,4 +152,10 @@ class TonKit(
             Address.parse(address)
         }
     }
+
+    sealed class SendAmount {
+        data class Amount(val value: BigInteger) : SendAmount()
+        data object Max : SendAmount()
+    }
+
 }

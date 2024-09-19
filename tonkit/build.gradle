@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.devtools.ksp)
     id('maven-publish')
+    id('kotlin-parcelize')
 }
 
 afterEvaluate {
@@ -51,7 +52,9 @@ dependencies {
     implementation libs.moshi.adapters
     implementation libs.androidx.room.runtime
     implementation libs.ton.kotlin.contract
+    implementation libs.ton.kotlin.mnemonic
     implementation libs.logging.interceptor
+    implementation libs.androidx.security.crypto
 
     annotationProcessor libs.androidx.room.compiler
     ksp libs.androidx.room.compiler

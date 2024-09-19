@@ -19,3 +19,12 @@ class Address(private val addrStd: AddrStd) {
         }
     }
 }
+
+class FriendlyAddress(val addrStd: AddrStd, val isBounceable: Boolean) {
+
+    companion object {
+        fun parse(addressStr: String, bounceable: Boolean = false): FriendlyAddress {
+            return FriendlyAddress(AddrStd(addressStr), bounceable)
+        }
+    }
+}

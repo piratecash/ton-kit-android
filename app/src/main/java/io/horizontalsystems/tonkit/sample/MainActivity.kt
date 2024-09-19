@@ -117,12 +117,12 @@ fun SendScreen(viewModel: MainViewModel, uiState: MainUiState) {
 
         Text(
             modifier = Modifier.clickable {
-                uiState.account?.balance?.let {
+                uiState.balance?.let {
                     amountStr = it.toString()
                     viewModel.setAmount(amountStr)
                 }
             },
-            text = "Balance: ${uiState.account?.balance}",
+            text = "Balance: ${uiState.balance}",
         )
 
         TextField(
@@ -169,7 +169,7 @@ fun BalanceScreen(viewModel: MainViewModel, uiState: MainUiState) {
 
     Column {
         Text(text = "Address: $address")
-        Text(text = "Balance: ${uiState.account?.balance}")
+        Text(text = "Balance: ${uiState.balance}")
         Text(text = "Account Status: ${uiState.account?.status}")
         Text(text = "Sync State: ${uiState.syncState.description}")
         Text(text = "Jetton Sync State: ${uiState.jettonSyncState.description}")

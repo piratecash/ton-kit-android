@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.horizontalsystems.tonkit.Address
+import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.core.TonKit
 import io.horizontalsystems.tonkit.core.TonKit.WalletType
 import io.horizontalsystems.tonkit.models.Account
@@ -16,6 +17,8 @@ import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.SyncState
 import io.horizontalsystems.tonkit.models.TagQuery
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 
@@ -40,6 +43,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var eventSyncState = tonKit.eventSyncStateFlow.value
     private var events: List<Event>? = null
 
+    private val balance: BigDecimal?
+        get() = account?.balance?.toBigDecimal()?.movePointLeft(9)
+
     var uiState by mutableStateOf(
         MainUiState(
             syncState = syncState,
@@ -47,7 +53,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             eventSyncState = eventSyncState,
             account = account,
             jettonBalanceMap = jettonBalanceMap,
-            events = events
+            events = events,
+            balance = balance
         )
     )
         private set
@@ -79,9 +86,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        refreshFee()
-
-        events = tonKit.events(tagQuery)
+        events = tonKit.events(tagQuery, limit = 10)
         emitState()
 
 
@@ -90,20 +95,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 //                transactionList = null
 //                loadNextTransactionsPage()
 //                refreshFee()
-//            }
-//        }
-    }
-
-    private fun refreshFee() {
-//        viewModelScope.launch(Dispatchers.IO) {
-//            val estimateFee = try {
-//                tonKit.estimateFee()
-//            } catch (e: Throwable) {
-//                e.message
-//            }
-//
-//            viewModelScope.launch {
-//                fee = estimateFee
 //            }
 //        }
     }
@@ -162,6 +153,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 account = account,
                 jettonBalanceMap = jettonBalanceMap,
                 events = events,
+                balance = balance,
             )
         }
     }
@@ -170,12 +162,49 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var sendAmount: BigDecimal? = null
 
     fun setAmount(amount: String) {
-        sendAmount = amount.toBigDecimal()
+        sendAmount = amount.toBigDecimalOrNull()
+
+        refreshFee()
     }
 
     fun setRecipient(recipient: String) {
         sendRecipient = recipient
+
+        refreshFee()
     }
+
+    private var refreshFeeJob: Job? = null
+
+    private fun refreshFee() {
+        val sendRecipientForKit1 = sendRecipientForKit
+        val sendAmountForKit1 = sendAmountForKit
+
+        refreshFeeJob?.cancel()
+        refreshFeeJob = viewModelScope.launch(Dispatchers.Default) {
+            fee = "estimation in progress..."
+            if (sendRecipientForKit1 != null && sendAmountForKit1 != null) {
+                val estimateFee = tonKit.estimateFee(sendRecipientForKit1, sendAmountForKit1, null)
+
+                ensureActive()
+                fee = estimateFee.toBigDecimal(9).toPlainString()
+            } else {
+                ensureActive()
+                fee = null
+            }
+        }
+    }
+
+    private val sendAmountForKit: TonKit.SendAmount?
+        get() = sendAmount?.let {
+            if (it.compareTo(balance) == 0) {
+                TonKit.SendAmount.Max
+            } else {
+                TonKit.SendAmount.Amount(it.movePointRight(9).toBigInteger())
+            }
+        }
+    private val sendRecipientForKit: FriendlyAddress?
+        get() = sendRecipient?.let { FriendlyAddress.parse(it) }
+
 
     var sendResult by mutableStateOf("")
         private set
@@ -220,6 +249,7 @@ data class MainUiState(
     val account: Account?,
     val jettonBalanceMap: Map<Address, JettonBalance>,
     val events: List<Event>?,
+    val balance: BigDecimal?,
 )
 
 fun SyncState.toStr() = when (this) {
