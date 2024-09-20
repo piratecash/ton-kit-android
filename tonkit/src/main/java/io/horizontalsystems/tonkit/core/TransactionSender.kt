@@ -28,9 +28,6 @@ class TransactionSender(
     }
 
     suspend fun estimateFee(recipient: FriendlyAddress, amount: TonKit.SendAmount, comment: String?): BigInteger {
-        val seqno = api.getAccountSeqno(sender)
-        val timeout = safeTimeout()
-
         val value: BigInteger
         val isMax: Boolean
 
@@ -45,20 +42,28 @@ class TransactionSender(
             }
         }
 
-        val transfer = getTonTransferEntity(seqno, value, isMax, recipient, comment, timeout)
+        val transfer = getTonTransferEntity(
+            value,
+            isMax,
+            recipient,
+            comment,
+            TokenEntity.TON
+        )
         val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
 
         return api.estimateFee(message.base64())
     }
 
-    private fun getTonTransferEntity(
-        seqno: Int,
+    private suspend fun getTonTransferEntity(
         value: BigInteger,
         isMax: Boolean,
         recipient: FriendlyAddress,
         comment: String?,
-        timeout: Long,
+        tokenEntity: TokenEntity,
     ): TransferEntity {
+        val seqno = api.getAccountSeqno(sender)
+        val timeout = safeTimeout()
+
         val walletEntity = WalletEntity(
             id = "id",
             publicKey = privateKey.publicKey(),
@@ -77,7 +82,7 @@ class TransactionSender(
             .setValidUntil(timeout)
             .setToken(
                 BalanceEntity(
-                    TokenEntity.TON,
+                    tokenEntity,
                     Coins.ZERO,
                     sender.toRaw()
                 )
@@ -86,61 +91,27 @@ class TransactionSender(
         return transfer
     }
 
-//    suspend fun estimateFee(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?): BigInteger {
-//        val seqno = api.getAccountSeqno(sender)
-//        val timeout = safeTimeout()
-//
-//        val transfer = TransferEntity.Builder(walletEntity)
-//            .setSeqno(seqno)
-//            .setAmount(Coins.of(amount.toBigDecimal(jettonDecimals)))
-//            .setMax(false)
-//            .setDestination(recipient.addrStd)
-//            .setBounceable(recipient.isBounceable)
-//            .setComment(comment)
-//            .setValidUntil(timeout)
-//            .setToken(
-//                BalanceEntity(
-//                    TokenEntity(
-//                        address = "0:b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe",
-//                        name = "Tether USD",
-//                        symbol = "USD₮",
-//                        imageUri = USDT_ICON_URI,
-//                        decimals = 6,
-//                        verification = Verification.whitelist
-//                    ),
-//                    Coins.ZERO,
-//                    sender.toRaw()
-//                )
-//            )
-//            .build()
-//        val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
-//
-//
-//        return api.estimateFee(message.base64())
-//
-//        let data = TransferData(
-//            contract: contract,
-//            sender: sender,
-//            seqno: UInt64(seqno),
-//            amount: amount,
-//            isMax: false,
-//            recipient: recipient.address,
-//            isBounceable: recipient.isBounceable,
-//            comment: comment,
-//            timeout: timeout
-//        ) { transfer in
-//            try transfer.signMessage(signer: WalletTransferEmptyKeySigner())
-//        }
-//
-//        let boc = try JettonTransferBoc(jetton: jettonWallet, transferData: data).create()
-//
-//        return try await api.estimateFee(boc: boc)
-//    }
+    suspend fun estimateFee(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?): BigInteger {
+        val transfer = getTonTransferEntity(
+            amount,
+            false,
+            recipient,
+            comment,
+            TokenEntity(
+                address = jettonWallet.toRaw(),
+                name = "jetton",
+                symbol = "jetton",
+                decimals = 9,
+                verification = TokenEntity.Verification.whitelist
+            )
+        )
+        val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
+
+        return api.estimateFee(message.base64())
+
+    }
 
     suspend fun send(recipient: FriendlyAddress, amount: TonKit.SendAmount, comment: String?) {
-        val seqno = api.getAccountSeqno(sender)
-        val timeout = safeTimeout()
-
         val value: BigInteger
         val isMax: Boolean
 
@@ -155,7 +126,13 @@ class TransactionSender(
             }
         }
 
-        val transfer = getTonTransferEntity(seqno, value, isMax, recipient, comment, timeout)
+        val transfer = getTonTransferEntity(
+            value,
+            isMax,
+            recipient,
+            comment,
+            TokenEntity.TON
+        )
         val message = transfer.toSignedMessage(privateKey)
 
         api.send(message.base64())

@@ -52,6 +52,10 @@ class TonKit(
         return transactionSender?.estimateFee(recipient, amount, comment) ?: throw WalletError.WatchOnly
     }
 
+    suspend fun estimateFee(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?): BigInteger {
+        return transactionSender?.estimateFee(jettonWallet, recipient, amount, comment) ?: throw WalletError.WatchOnly
+    }
+
     suspend fun send(recipient: FriendlyAddress, amount: SendAmount, comment: String?) {
         transactionSender?.send(recipient, amount, comment) ?: throw WalletError.WatchOnly
     }

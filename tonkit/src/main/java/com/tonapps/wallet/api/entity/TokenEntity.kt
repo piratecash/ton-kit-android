@@ -1,8 +1,6 @@
 package com.tonapps.wallet.api.entity
 
-import android.net.Uri
 import android.os.Parcelable
-import io.horizontalsystems.tonkit.R
 import io.tonapi.models.JettonPreview
 import io.tonapi.models.JettonVerificationType
 import kotlinx.parcelize.Parcelize
@@ -12,7 +10,6 @@ data class TokenEntity(
     val address: String,
     val name: String,
     val symbol: String,
-    val imageUri: Uri,
     val decimals: Int,
     val verification: Verification
 ): Parcelable {
@@ -22,15 +19,10 @@ data class TokenEntity(
     }
 
     companion object {
-
-        val TON_ICON_URI = Uri.Builder().scheme("res").path(R.drawable.ic_ton_with_bg.toString()).build()
-        val USDT_ICON_URI = Uri.Builder().scheme("res").path(R.drawable.ic_usdt.toString()).build()
-
         val TON = TokenEntity(
             address = "TON",
             name = "Toncoin",
             symbol = "TON",
-            imageUri = TON_ICON_URI,
             decimals = 9,
             verification = Verification.whitelist
         )
@@ -39,7 +31,6 @@ data class TokenEntity(
             address = "0:b113a994b5024a16719f69139328eb759596c38a25f59028b146fecdc3621dfe",
             name = "Tether USD",
             symbol = "USD₮",
-            imageUri = USDT_ICON_URI,
             decimals = 6,
             verification = Verification.whitelist
         )
@@ -63,7 +54,6 @@ data class TokenEntity(
         address = jetton.address,
         name = jetton.name,
         symbol = jetton.symbol,
-        imageUri = Uri.parse(jetton.image),
         decimals = jetton.decimals,
         verification = convertVerification(jetton.verification)
     )
