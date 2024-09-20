@@ -34,6 +34,8 @@ class TonKit(
     val jettonBalanceMapFlow by jettonManager::jettonBalanceMapFlow
     val eventSyncStateFlow by eventManager::syncStateFlow
 
+    val account get() = accountFlow.value
+
     fun events(tagQuery: TagQuery, beforeLt: Long? = null, limit: Int? = null): List<Event> {
         return eventManager.events(tagQuery, beforeLt, limit)
     }
@@ -47,9 +49,11 @@ class TonKit(
     }
 
     suspend fun estimateFee(recipient: FriendlyAddress, amount: SendAmount, comment: String?) : BigInteger {
-        transactionSender?.let {
-            return transactionSender.estimateFee(recipient, amount, comment)
-        } ?: throw WalletError.WatchOnly
+        return transactionSender?.estimateFee(recipient, amount, comment) ?: throw WalletError.WatchOnly
+    }
+
+    suspend fun send(recipient: FriendlyAddress, amount: SendAmount, comment: String?) {
+        transactionSender?.send(recipient, amount, comment) ?: throw WalletError.WatchOnly
     }
 
     suspend fun sync() = coroutineScope {

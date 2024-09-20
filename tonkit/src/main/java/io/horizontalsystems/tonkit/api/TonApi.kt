@@ -17,6 +17,7 @@ import io.tonapi.apis.JettonsApi
 import io.tonapi.apis.LiteServerApi
 import io.tonapi.apis.WalletApi
 import io.tonapi.models.EmulateMessageToWalletRequest
+import io.tonapi.models.SendBlockchainMessageRequest
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level
@@ -113,8 +114,7 @@ class TonApi(network: Network) : IApi {
     }
 
     override suspend fun send(boc: String) {
-        TODO()
-//        blockchainApi.sendBlockchainMessage(boc)
+        val request = SendBlockchainMessageRequest(boc)
+        blockchainApi.sendBlockchainMessage(request)
     }
-
 }
