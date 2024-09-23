@@ -6,7 +6,6 @@ import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.icu.Coins
 import com.tonapps.tonkeeper.core.entities.TransferEntity
 import com.tonapps.wallet.api.entity.BalanceEntity
-import com.tonapps.wallet.api.entity.TokenEntity
 import com.tonapps.wallet.data.account.Wallet
 import com.tonapps.wallet.data.account.entities.WalletEntity
 import io.horizontalsystems.tonkit.Address
@@ -47,8 +46,8 @@ class TransactionSender(
             isMax,
             recipient,
             comment,
-            TokenEntity.TON,
-            sender.toRaw()
+            sender.toRaw(),
+            true
         )
         val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
 
@@ -60,8 +59,8 @@ class TransactionSender(
         isMax: Boolean,
         recipient: FriendlyAddress,
         comment: String?,
-        tokenEntity: TokenEntity,
         walletAddress: String,
+        isTon: Boolean,
     ): TransferEntity {
         val seqno = api.getAccountSeqno(sender)
         val timeout = safeTimeout()
@@ -74,6 +73,9 @@ class TransactionSender(
             label = Wallet.Label("", "", 0),
             ledger = null
         )
+
+        // Using Coins.DEFAULT_DECIMALS for jetton instead of its own decimals is ok.
+        // At the end amount will be converted to long using the same Coins.DEFAULT_DECIMALS
         val transfer = TransferEntity.Builder(walletEntity)
             .setSeqno(seqno)
             .setAmount(Coins.of(value.toBigDecimal(Coins.DEFAULT_DECIMALS)))
@@ -82,13 +84,7 @@ class TransactionSender(
             .setBounceable(recipient.isBounceable)
             .setComment(comment)
             .setValidUntil(timeout)
-            .setToken(
-                BalanceEntity(
-                    tokenEntity,
-                    Coins.ZERO,
-                    walletAddress
-                )
-            )
+            .setToken(BalanceEntity(isTon, walletAddress))
             .build()
         return transfer
     }
@@ -99,14 +95,8 @@ class TransactionSender(
             false,
             recipient,
             comment,
-            TokenEntity(
-                address = jettonWallet.toRaw(),
-                name = "jetton",
-                symbol = "jetton",
-                decimals = 9,
-                verification = TokenEntity.Verification.whitelist
-            ),
-            jettonWallet.toRaw()
+            jettonWallet.toRaw(),
+            false
         )
         val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
 
@@ -134,8 +124,8 @@ class TransactionSender(
             isMax,
             recipient,
             comment,
-            TokenEntity.TON,
-            sender.toRaw()
+            sender.toRaw(),
+            true
         )
         val message = transfer.toSignedMessage(privateKey)
 
@@ -148,14 +138,8 @@ class TransactionSender(
             false,
             recipient,
             comment,
-            TokenEntity(
-                address = jettonWallet.toRaw(),
-                name = "jetton",
-                symbol = "jetton",
-                decimals = 9,
-                verification = TokenEntity.Verification.whitelist
-            ),
-            jettonWallet.toRaw()
+            jettonWallet.toRaw(),
+            false
         )
         val message = transfer.toSignedMessage(privateKey)
 
