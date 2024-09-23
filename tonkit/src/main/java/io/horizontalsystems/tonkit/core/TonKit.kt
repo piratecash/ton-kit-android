@@ -7,6 +7,7 @@ import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.EventInfo
+import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.TagQuery
 import io.horizontalsystems.tonkit.models.TagToken
@@ -35,6 +36,7 @@ class TonKit(
     val eventSyncStateFlow by eventManager::syncStateFlow
 
     val account get() = accountFlow.value
+    val jettonBalanceMap get() = jettonBalanceMapFlow.value
 
     fun events(tagQuery: TagQuery, beforeLt: Long? = null, limit: Int? = null): List<Event> {
         return eventManager.events(tagQuery, beforeLt, limit)
@@ -58,6 +60,10 @@ class TonKit(
 
     suspend fun send(recipient: FriendlyAddress, amount: SendAmount, comment: String?) {
         transactionSender?.send(recipient, amount, comment) ?: throw WalletError.WatchOnly
+    }
+
+    suspend fun send(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?) {
+        transactionSender?.send(jettonWallet, recipient, amount, comment) ?: throw WalletError.WatchOnly
     }
 
     suspend fun sync() = coroutineScope {
@@ -137,7 +143,7 @@ class TonKit(
 
             val database = KitDatabase.getInstance(context, "${walletId}-${network.name}")
 
-            val api = TonApi(network)
+            val api = getTonApi(network)
 
             val accountManager = AccountManager(address, api, database.accountDao())
             val jettonManager = JettonManager(address, api, database.jettonDao())
@@ -154,6 +160,12 @@ class TonKit(
                 eventManager,
                 transactionSender
             )
+        }
+
+        private fun getTonApi(network: Network) = TonApi(network)
+
+        suspend fun getJetton(network: Network, address: Address): Jetton {
+            return getTonApi(network).getJettonInfo(address)
         }
 
         fun validateAddress(address: String) {

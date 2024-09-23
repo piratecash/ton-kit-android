@@ -47,7 +47,8 @@ class TransactionSender(
             isMax,
             recipient,
             comment,
-            TokenEntity.TON
+            TokenEntity.TON,
+            sender.toRaw()
         )
         val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
 
@@ -60,6 +61,7 @@ class TransactionSender(
         recipient: FriendlyAddress,
         comment: String?,
         tokenEntity: TokenEntity,
+        walletAddress: String,
     ): TransferEntity {
         val seqno = api.getAccountSeqno(sender)
         val timeout = safeTimeout()
@@ -84,7 +86,7 @@ class TransactionSender(
                 BalanceEntity(
                     tokenEntity,
                     Coins.ZERO,
-                    sender.toRaw()
+                    walletAddress
                 )
             )
             .build()
@@ -103,7 +105,8 @@ class TransactionSender(
                 symbol = "jetton",
                 decimals = 9,
                 verification = TokenEntity.Verification.whitelist
-            )
+            ),
+            jettonWallet.toRaw()
         )
         val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
 
@@ -131,35 +134,31 @@ class TransactionSender(
             isMax,
             recipient,
             comment,
-            TokenEntity.TON
+            TokenEntity.TON,
+            sender.toRaw()
         )
         val message = transfer.toSignedMessage(privateKey)
 
         api.send(message.base64())
     }
 
-//    func send(jettonWallet: Address, recipient: FriendlyAddress, amount: BigUInt, comment: String?) async throws {
-//        let seqno = try await api.getAccountSeqno(address: sender)
-//        let timeout = await safeTimeout()
-//        let secretKey = secretKey
-//
-//        let data = TransferData(
-//            contract: contract,
-//            sender: sender,
-//            seqno: UInt64(seqno),
-//            amount: amount,
-//            isMax: false,
-//            recipient: recipient.address,
-//            isBounceable: recipient.isBounceable,
-//            comment: comment,
-//            timeout: timeout
-//        ) { transfer in
-//            try transfer.signMessage(signer: WalletTransferSecretKeySigner(secretKey: secretKey))
-//        }
-//
-//        let boc = try JettonTransferBoc(jetton: jettonWallet, transferData: data).create()
-//
-//        return try await api.send(boc: boc)
-//    }
+    suspend fun send(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?) {
+        val transfer = getTonTransferEntity(
+            amount,
+            false,
+            recipient,
+            comment,
+            TokenEntity(
+                address = jettonWallet.toRaw(),
+                name = "jetton",
+                symbol = "jetton",
+                decimals = 9,
+                verification = TokenEntity.Verification.whitelist
+            ),
+            jettonWallet.toRaw()
+        )
+        val message = transfer.toSignedMessage(privateKey)
 
+        api.send(message.base64())
+    }
 }

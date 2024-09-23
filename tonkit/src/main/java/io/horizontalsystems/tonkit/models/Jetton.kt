@@ -24,7 +24,16 @@ data class Jetton(
         )
 
         fun fromJettonInfo(jettonInfo: JettonInfo): Jetton {
-            TODO("Not yet implemented")
+            val metadata = jettonInfo.metadata
+
+            return Jetton(
+                address = Address.parse(metadata.address),
+                name = metadata.name,
+                symbol = metadata.symbol,
+                decimals = metadata.decimals.toInt(),
+                image = metadata.image,
+                verification = JettonVerificationType.fromApi(jettonInfo.verification)
+            )
         }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.core.TonKit
 import kotlinx.coroutines.CancellationException
@@ -14,11 +15,22 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 
-class SendViewModel : ViewModel() {
+class SendViewModel(private val sendType: SendType) : ViewModel() {
+
+    sealed interface SendType {
+        data object Ton : SendType
+        data class Jetton(val walletAddress: Address, val decimals: Int, val balance: BigDecimal) : SendType
+    }
+
     private val tonKit = App.tonKit
-    private var account = tonKit.account
+    private val tonBalance: BigDecimal?
+        get() = tonKit.account?.balance?.toBigDecimal()?.movePointLeft(9)
+
     private val balance: BigDecimal?
-        get() = account?.balance?.toBigDecimal()?.movePointLeft(9)
+        get() = when (sendType) {
+            is SendType.Jetton -> sendType.balance
+            SendType.Ton -> tonBalance
+        }
 
     private var feeEstimateInProgress = false
     private var fee: BigDecimal? = null
@@ -30,11 +42,20 @@ class SendViewModel : ViewModel() {
     private val sendRecipientForKit: FriendlyAddress?
         get() = sendRecipient?.let { FriendlyAddress.parse(it) }
     private val sendAmountForKit: TonKit.SendAmount?
-        get() = sendAmount?.let {
-            if (it.compareTo(balance) == 0) {
-                TonKit.SendAmount.Max
-            } else {
-                TonKit.SendAmount.Amount(it.movePointRight(9).toBigInteger())
+        get() = when (sendType) {
+            is SendType.Jetton -> {
+                sendAmount?.let {
+                    TonKit.SendAmount.Amount(it.movePointRight(sendType.decimals).toBigInteger())
+                }
+            }
+            SendType.Ton -> {
+                sendAmount?.let {
+                    if (it.compareTo(tonBalance) == 0) {
+                        TonKit.SendAmount.Max
+                    } else {
+                        TonKit.SendAmount.Amount(it.movePointRight(9).toBigInteger())
+                    }
+                }
             }
         }
 
@@ -70,14 +91,24 @@ class SendViewModel : ViewModel() {
     fun send() {
         viewModelScope.launch(Dispatchers.Default) {
             val sendRecipientForKit1 = sendRecipientForKit
+            val sendAmount1 = sendAmount
             val sendAmountForKit1 = sendAmountForKit
 
-            if (sendRecipientForKit1 != null && sendAmountForKit1 != null) {
+            if (sendRecipientForKit1 != null && sendAmountForKit1 != null && sendAmount1 != null) {
                 sendInProgress = true
                 emitState()
 
                 try {
-                    tonKit.send(sendRecipientForKit1, sendAmountForKit1, null)
+                    when (sendType) {
+                        is SendType.Jetton -> {
+                            val amount = sendAmount1.movePointRight(sendType.decimals).toBigInteger()
+                            tonKit.send(sendType.walletAddress, sendRecipientForKit1, amount, null)
+                        }
+                        SendType.Ton -> {
+                            tonKit.send(sendRecipientForKit1, sendAmountForKit1, null)
+                        }
+                    }
+
                     sendResult = "Sent Success"
                 } catch (e: Throwable) {
                     sendResult = "Sending Failed: $e"
@@ -87,7 +118,6 @@ class SendViewModel : ViewModel() {
                 emitState()
             }
         }
-
     }
 
     private fun emitState() {
@@ -105,6 +135,7 @@ class SendViewModel : ViewModel() {
 
     private fun refreshFee() {
         val sendRecipientForKit1 = sendRecipientForKit
+        val sendAmount1 = sendAmount
         val sendAmountForKit1 = sendAmountForKit
 
         refreshFeeJob?.cancel()
@@ -113,9 +144,18 @@ class SendViewModel : ViewModel() {
             feeEstimateInProgress = true
             emitState()
 
-            if (sendRecipientForKit1 != null && sendAmountForKit1 != null) {
+            if (sendRecipientForKit1 != null && sendAmountForKit1 != null && sendAmount1 != null) {
                 try {
-                    val estimateFee = tonKit.estimateFee(sendRecipientForKit1, sendAmountForKit1, null)
+                    val estimateFee = when (sendType) {
+                        is SendType.Jetton -> {
+                            val amount = sendAmount1.movePointRight(sendType.decimals).toBigInteger()
+                            tonKit.estimateFee(sendType.walletAddress, sendRecipientForKit1, amount, null)
+                        }
+                        SendType.Ton -> {
+                            tonKit.estimateFee(sendRecipientForKit1, sendAmountForKit1, null)
+                        }
+                    }
+
                     ensureActive()
                     fee = estimateFee.toBigDecimal(9)
                 } catch (_: CancellationException) {

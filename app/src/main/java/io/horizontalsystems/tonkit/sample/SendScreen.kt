@@ -17,8 +17,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-fun SendScreen() {
-    val viewModel = viewModel<SendViewModel>()
+fun SendScreen(sendType: SendViewModel.SendType) {
+    val viewModel = viewModel<SendViewModel>(initializer = {
+        SendViewModel(sendType)
+    })
 
     val uiState = viewModel.uiState
 
