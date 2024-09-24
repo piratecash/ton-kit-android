@@ -81,6 +81,9 @@ interface EventDao {
     @Query("SELECT * FROM Event WHERE id IN (:ids)")
     fun events(ids: List<String>): List<Event>
 
+    @Query("SELECT COUNT(*) FROM Event WHERE id = :id AND inProgress = 0")
+    fun isEventCompleted(id: String): Boolean
+
     @Query("SELECT * FROM Event ORDER BY lt DESC LIMIT 0, 1")
     fun latestEvent(): Event?
 

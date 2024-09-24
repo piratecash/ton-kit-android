@@ -19,22 +19,12 @@ import io.tonapi.apis.WalletApi
 import io.tonapi.models.EmulateMessageToWalletRequest
 import io.tonapi.models.SendBlockchainMessageRequest
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
-import okhttp3.logging.HttpLoggingInterceptor.Level
 import java.math.BigInteger
 
-class TonApi(network: Network) : IApi {
+class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
     private val basePath = when (network) {
         MainNet -> "https://tonapi.io"
         TestNet -> "https://testnet.tonapi.io"
-    }
-
-    private val okHttpClient: OkHttpClient by lazy {
-        val logging = HttpLoggingInterceptor()
-        logging.level = Level.BASIC
-        OkHttpClient.Builder()
-            .addInterceptor(logging)
-            .build()
     }
 
     private val accountsApi = AccountsApi(basePath, okHttpClient)

@@ -41,14 +41,15 @@ data class Jetton(
 enum class JettonVerificationType(val value: String) {
     WHITELIST("whitelist"),
     BLACKLIST("blacklist"),
-    NONE("none");
+    NONE("none"),
+    UNKNOWN("unknown");
 
     companion object {
         fun fromApi(type: io.tonapi.models.JettonVerificationType) = when (type) {
             io.tonapi.models.JettonVerificationType.whitelist -> WHITELIST
             io.tonapi.models.JettonVerificationType.blacklist -> BLACKLIST
             io.tonapi.models.JettonVerificationType.none -> NONE
-            else -> throw IllegalArgumentException()
+            io.tonapi.models.JettonVerificationType.unknown_default_open_api -> UNKNOWN
         }
     }
 }

@@ -166,6 +166,10 @@ class EventManager(
         eventFlow.tryEmit(EventInfoWithTags(eventsWithTags, initial))
     }
 
+    fun isEventCompleted(eventId: String) : Boolean {
+        return dao.isEventCompleted(eventId)
+    }
+
     companion object {
         private val limit = 100
     }

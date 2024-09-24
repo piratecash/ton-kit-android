@@ -142,11 +142,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun start() {
         viewModelScope.launch(Dispatchers.Default) {
             tonKit.sync()
+            tonKit.startListener()
         }
     }
 
     fun stop() {
-//        tonKit.stop()
+        tonKit.stopListener()
     }
 }
 

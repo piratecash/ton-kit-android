@@ -5,6 +5,7 @@ import com.tonapps.blockchain.ton.contract.WalletV4R2Contract
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.TonApi
+import io.horizontalsystems.tonkit.api.TonApiListener
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.EventInfo
 import io.horizontalsystems.tonkit.models.Jetton
@@ -12,16 +13,24 @@ import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.TagQuery
 import io.horizontalsystems.tonkit.models.TagToken
 import io.horizontalsystems.tonkit.storage.KitDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.logging.HttpLoggingInterceptor.Level
 import org.ton.api.pk.PrivateKeyEd25519
 import org.ton.mnemonic.Mnemonic
 import java.math.BigInteger
 
 class TonKit(
     private val address: Address,
+    private val apiListener: TonApiListener,
     private val accountManager: AccountManager,
     private val jettonManager: JettonManager,
     private val eventManager: EventManager,
@@ -37,6 +46,27 @@ class TonKit(
 
     val account get() = accountFlow.value
     val jettonBalanceMap get() = jettonBalanceMapFlow.value
+
+    private val coroutineScope = CoroutineScope(Dispatchers.Default)
+
+    init {
+        coroutineScope.launch {
+            apiListener.transactionFlow.collect {
+                handleEvent(it)
+            }
+        }
+    }
+
+    private suspend fun handleEvent(eventId: String) {
+        repeat(3) {
+            delay(5000)
+            if (eventManager.isEventCompleted(eventId)) {
+                return
+            }
+
+            sync()
+        }
+    }
 
     fun events(tagQuery: TagQuery, beforeLt: Long? = null, limit: Int? = null): List<Event> {
         return eventManager.events(tagQuery, beforeLt, limit)
@@ -64,6 +94,14 @@ class TonKit(
 
     suspend fun send(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?) {
         transactionSender?.send(jettonWallet, recipient, amount, comment) ?: throw WalletError.WatchOnly
+    }
+
+    fun startListener() {
+        apiListener.start(address = address)
+    }
+
+    fun stopListener() {
+        apiListener.stop()
     }
 
     suspend fun sync() = coroutineScope {
@@ -108,6 +146,14 @@ class TonKit(
 //    }
 
     companion object {
+        private val okHttpClient: OkHttpClient by lazy {
+            val logging = HttpLoggingInterceptor()
+            logging.level = Level.NONE
+            OkHttpClient.Builder()
+                .addInterceptor(logging)
+                .build()
+        }
+
         fun getInstance(
             type: WalletType,
             network: Network,
@@ -153,8 +199,11 @@ class TonKit(
                 TransactionSender(api, address, privateKey)
             }
 
+            val apiListener = TonApiListener(network, okHttpClient)
+
             return TonKit(
                 address,
+                apiListener,
                 accountManager,
                 jettonManager,
                 eventManager,
@@ -162,7 +211,7 @@ class TonKit(
             )
         }
 
-        private fun getTonApi(network: Network) = TonApi(network)
+        private fun getTonApi(network: Network) = TonApi(network, okHttpClient)
 
         suspend fun getJetton(network: Network, address: Address): Jetton {
             return getTonApi(network).getJettonInfo(address)

@@ -48,6 +48,7 @@ dependencies {
     implementation libs.androidx.appcompat
     implementation libs.material
     implementation libs.okhttp
+    implementation libs.okhttp.sse
     implementation libs.moshi.kotlin
     implementation libs.moshi.adapters
     implementation libs.androidx.room.runtime
