@@ -10,7 +10,7 @@ data class Tag(
     val type: Type? = null,
     val platform: Platform? = null,
     val jettonAddress: Address? = null,
-    val addresses: List<Address>,
+    val addresses: List<Address> = listOf(),
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0
 ) {
