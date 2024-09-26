@@ -8,10 +8,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.models.Account
-import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.JettonBalance
 import io.horizontalsystems.tonkit.models.SyncState
-import io.horizontalsystems.tonkit.models.TagQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
@@ -26,7 +24,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var jettonSyncState = tonKit.jettonSyncStateFlow.value
     private var jettonBalanceMap = tonKit.jettonBalanceMapFlow.value
     private var eventSyncState = tonKit.eventSyncStateFlow.value
-    private var events: List<Event>? = null
     private val balance: BigDecimal?
         get() = account?.balance?.toBigDecimal()?.movePointLeft(9)
 
@@ -37,7 +34,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             eventSyncState = eventSyncState,
             account = account,
             jettonBalanceMap = jettonBalanceMap,
-            events = events,
             balance = balance
         )
     )
@@ -59,37 +55,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.Default) {
             tonKit.eventSyncStateFlow.collect(::updateEventSyncState)
         }
-        val tagQuery = TagQuery(null, null, null, null)
-        viewModelScope.launch(Dispatchers.Default) {
-            val eventFlow = tonKit.eventFlow(tagQuery)
-            eventFlow.collect {
-                it.events
-            }
-        }
-
-        events = tonKit.events(tagQuery, limit = 10)
-        emitState()
-
-
-//        viewModelScope.launch(Dispatchers.IO) {
-//            tonKit.newTransactionsFlow.collect {
-//                transactionList = null
-//                loadNextTransactionsPage()
-//                refreshFee()
-//            }
-//        }
     }
-
-//    fun loadNextTransactionsPage() {
-//        viewModelScope.launch(Dispatchers.IO) {
-//            var list = transactionList ?: listOf()
-//            list += tonKit.transactions(transactionList?.lastOrNull()?.hash, null, null, 10)
-//
-//            transactionList = list
-//
-//            emitState()
-//        }
-//    }
 
     private fun updateSyncState(syncState: SyncState) {
         this.syncState = syncState
@@ -133,7 +99,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 eventSyncState = eventSyncState,
                 account = account,
                 jettonBalanceMap = jettonBalanceMap,
-                events = events,
                 balance = balance,
             )
         }
@@ -157,6 +122,5 @@ data class MainUiState(
     val eventSyncState: SyncState,
     val account: Account?,
     val jettonBalanceMap: Map<Address, JettonBalance>,
-    val events: List<Event>?,
     val balance: BigDecimal?,
 )

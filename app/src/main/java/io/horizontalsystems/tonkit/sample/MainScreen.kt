@@ -46,7 +46,7 @@ fun MainScreen(navController: NavHostController) {
             Crossfade(targetState = currentPage, label = "") {
                 when (it) {
                     Page.Balance -> BalanceScreen(viewModel, uiState, navController)
-                    Page.Events -> Events(viewModel, uiState)
+                    Page.Events -> EventsScreen()
                     Page.Send -> SendScreen(SendViewModel.SendType.Ton)
                 }
             }

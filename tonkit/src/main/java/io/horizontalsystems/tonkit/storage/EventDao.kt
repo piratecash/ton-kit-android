@@ -1,6 +1,5 @@
 package io.horizontalsystems.tonkit.storage
 
-import android.util.Log
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -67,8 +66,6 @@ interface EventDao {
             $orderClause
             $limitClause
             """
-
-        Log.e("AAA", "sql: $sql")
 
         val query = SimpleSQLiteQuery(sql, arguments.toTypedArray())
 

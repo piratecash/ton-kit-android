@@ -14,6 +14,7 @@ import io.horizontalsystems.tonkit.storage.EventDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
@@ -35,7 +36,7 @@ class EventManager(
     }
 
     fun eventFlow(tagQuery: TagQuery): Flow<EventInfo> {
-        var filteredEventFlow: Flow<EventInfoWithTags> = eventFlow
+        var filteredEventFlow: Flow<EventInfoWithTags> = eventFlow.asSharedFlow()
 
         if (!tagQuery.isEmpty) {
             filteredEventFlow = filteredEventFlow.filter { info: EventInfoWithTags ->
@@ -134,7 +135,7 @@ class EventManager(
         }
     }
 
-    private fun handleLatest(events: List<Event>) {
+    private suspend fun handleLatest(events: List<Event>) {
         val (inProgressEvents, completedEvents) = events.partition { it.inProgress }
 
         val eventsToHandle = mutableListOf<Event>()
@@ -152,7 +153,7 @@ class EventManager(
         handle(inProgressEvents + eventsToHandle, false)
     }
 
-    private fun handle(events: List<Event>, initial: Boolean) {
+    private suspend fun handle(events: List<Event>, initial: Boolean) {
         if (events.isEmpty()) return
 
         dao.save(events)
@@ -163,7 +164,7 @@ class EventManager(
         val tags = eventsWithTags.map { it.tags }.flatten()
         dao.resave(tags, events.map { it.id })
 
-        eventFlow.tryEmit(EventInfoWithTags(eventsWithTags, initial))
+        eventFlow.emit(EventInfoWithTags(eventsWithTags, initial))
     }
 
     fun isEventCompleted(eventId: String) : Boolean {
@@ -171,7 +172,7 @@ class EventManager(
     }
 
     companion object {
-        private val limit = 100
+        private const val limit = 100
     }
 
     private data class EventWithTags(
