@@ -35,6 +35,7 @@ class TonKit(
     private val jettonManager: JettonManager,
     private val eventManager: EventManager,
     private val transactionSender: TransactionSender?,
+    val network: Network,
 ) {
     val receiveAddress get() = address
 
@@ -55,6 +56,25 @@ class TonKit(
                 handleEvent(it)
             }
         }
+    }
+
+    suspend fun refresh() {
+        sync()
+    }
+
+    suspend fun start() = coroutineScope {
+        listOf(
+            async {
+                sync()
+            },
+            async {
+                startListener()
+            }
+        ).awaitAll()
+    }
+
+    fun stop() {
+        this.stopListener()
     }
 
     private suspend fun handleEvent(eventId: String) {
@@ -207,7 +227,8 @@ class TonKit(
                 accountManager,
                 jettonManager,
                 eventManager,
-                transactionSender
+                transactionSender,
+                network
             )
         }
 
