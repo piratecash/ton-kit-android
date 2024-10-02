@@ -48,6 +48,15 @@ fun BalanceScreen(viewModel: MainViewModel, uiState: MainUiState, navController:
         }
 
         Spacer(modifier = Modifier.height(20.dp))
+        Button(
+            onClick = {
+                navController.navigate(TonConnect)
+            }
+        ) {
+            Text(text = "Ton Connect")
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
 
         Text("JETTONS")
         Spacer(modifier = Modifier.height(10.dp))

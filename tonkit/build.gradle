@@ -40,6 +40,16 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+
+    buildFeatures {
+        prefab = true
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
+    }
 }
 
 dependencies {
@@ -56,6 +66,10 @@ dependencies {
     implementation libs.ton.kotlin.mnemonic
     implementation libs.logging.interceptor
     implementation libs.androidx.security.crypto
+
+    compileOnly(fileTree("libs") {
+        include("*.aar")
+    })
 
     annotationProcessor libs.androidx.room.compiler
     ksp libs.androidx.room.compiler

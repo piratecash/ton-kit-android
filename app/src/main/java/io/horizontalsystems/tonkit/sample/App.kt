@@ -13,20 +13,23 @@ class App : Application() {
     }
 
     private fun initTonKit() {
-        val walletType = WalletType.Watch("UQBpAeJL-VSLCigCsrgGQHCLeiEBdAuZBlbrrUGI4BVQJoPM")
-//        val words =
-//            "used ugly meat glad balance divorce inner artwork hire invest already piano".split(" ")
-//        val walletType = WalletType.Mnemonic(words, "")
+        val walletId = "wallet-${walletType.javaClass.simpleName}"
+//        val walletId = UUID.randomUUID().toString()
 
         tonKit = TonKit.getInstance(
             walletType,
             Network.MainNet,
             this,
-            "wallet-${walletType.javaClass.simpleName}"
+            walletId
         )
     }
 
     companion object {
+        val walletType = WalletType.Watch("EQDfvVvoSX_cDJ_L38Z2hkhA3fitZCPW1WV9mw6CcNbIrH-Q")
+//        val words =
+//            "used ugly meat glad balance divorce inner artwork hire invest already piano".split(" ")
+//        val walletType = WalletType.Mnemonic(words, "")
+
         lateinit var tonKit: TonKit
     }
 }

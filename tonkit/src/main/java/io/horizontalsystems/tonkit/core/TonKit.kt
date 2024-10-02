@@ -100,20 +100,37 @@ class TonKit(
         return eventManager.tagTokens()
     }
 
-    suspend fun estimateFee(recipient: FriendlyAddress, amount: SendAmount, comment: String?) : BigInteger {
-        return transactionSender?.estimateFee(recipient, amount, comment) ?: throw WalletError.WatchOnly
+    suspend fun estimateFee(
+        recipient: FriendlyAddress,
+        amount: SendAmount,
+        comment: String?,
+    ): BigInteger {
+        return transactionSender?.estimateFee(recipient, amount, comment)
+            ?: throw WalletError.WatchOnly
     }
 
-    suspend fun estimateFee(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?): BigInteger {
-        return transactionSender?.estimateFee(jettonWallet, recipient, amount, comment) ?: throw WalletError.WatchOnly
+    suspend fun estimateFee(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?,
+    ): BigInteger {
+        return transactionSender?.estimateFee(jettonWallet, recipient, amount, comment)
+            ?: throw WalletError.WatchOnly
     }
 
     suspend fun send(recipient: FriendlyAddress, amount: SendAmount, comment: String?) {
         transactionSender?.send(recipient, amount, comment) ?: throw WalletError.WatchOnly
     }
 
-    suspend fun send(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?) {
-        transactionSender?.send(jettonWallet, recipient, amount, comment) ?: throw WalletError.WatchOnly
+    suspend fun send(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?,
+    ) {
+        transactionSender?.send(jettonWallet, recipient, amount, comment)
+            ?: throw WalletError.WatchOnly
     }
 
     fun startListener() {
@@ -139,9 +156,47 @@ class TonKit(
     }
 
     sealed class WalletType {
-        data class Watch(val address: String) : WalletType()
+        val address get() = addressPrivateKeyPair.first
+        val privateKey get() = addressPrivateKeyPair.second
+
+        data class Watch(val addressStr: String) : WalletType()
         data class Seed(val seed: ByteArray) : WalletType()
         data class Mnemonic(val words: List<String>, val passphrase: String = "") : WalletType()
+
+        private val addressPrivateKeyPair: Pair<Address, PrivateKeyEd25519?> by lazy {
+            val address: Address
+            val privateKey: PrivateKeyEd25519?
+
+            when (this) {
+                is Mnemonic -> {
+                    val seed = org.ton.mnemonic.Mnemonic.toSeed(words, passphrase)
+                    privateKey = PrivateKeyEd25519(seed)
+
+                    val walletV4R2Contract =
+                        WalletV4R2Contract(publicKey = privateKey.publicKey())
+
+                    address = Address(walletV4R2Contract.address)
+                }
+
+                is Seed -> {
+                    privateKey = PrivateKeyEd25519(seed)
+
+                    val walletV4R2Contract =
+                        WalletV4R2Contract(publicKey = privateKey.publicKey())
+
+                    address = Address(walletV4R2Contract.address)
+                }
+
+                is Watch -> {
+                    privateKey = null
+                    address = Address.parse(this.addressStr)
+                }
+
+            }
+
+            Pair(address, privateKey)
+
+        }
     }
 
 //    enum WalletVersion {
@@ -180,32 +235,8 @@ class TonKit(
             context: Context,
             walletId: String,
         ): TonKit {
-            val address: Address
-            val privateKey: PrivateKeyEd25519?
-
-            when (type) {
-                is WalletType.Mnemonic -> {
-                    val seed = Mnemonic.toSeed(type.words, type.passphrase)
-                    privateKey = PrivateKeyEd25519(seed)
-
-                    val walletV4R2Contract = WalletV4R2Contract(publicKey = privateKey.publicKey())
-
-                    address = Address(walletV4R2Contract.address)
-                }
-
-                is WalletType.Seed -> {
-                    privateKey = PrivateKeyEd25519(type.seed)
-
-                    val walletV4R2Contract = WalletV4R2Contract(publicKey = privateKey.publicKey())
-
-                    address = Address(walletV4R2Contract.address)
-                }
-
-                is WalletType.Watch -> {
-                    privateKey = null
-                    address = Address.parse(type.address)
-                }
-            }
+            val address = type.address
+            val privateKey = type.privateKey
 
             val database = KitDatabase.getInstance(context, "${walletId}-${network.name}")
 
@@ -216,7 +247,7 @@ class TonKit(
             val eventManager = EventManager(address, api, database.eventDao())
 
             val transactionSender = privateKey?.let {
-                TransactionSender(api, address, privateKey)
+                TransactionSender(api, address, it)
             }
 
             val apiListener = TonApiListener(network, okHttpClient)

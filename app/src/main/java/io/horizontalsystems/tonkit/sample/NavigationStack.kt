@@ -14,6 +14,9 @@ object Home
 @Serializable
 data class JettonPage(val address: String)
 
+@Serializable
+object TonConnect
+
 @Composable
 fun NavigationStack() {
     val navController = rememberNavController()
@@ -26,6 +29,9 @@ fun NavigationStack() {
             val jettonPage: JettonPage = backStackEntry.toRoute()
 
             JettonScreen(jettonPage.address)
+        }
+        composable<TonConnect> {
+            TonConnectScreen()
         }
     }
 }
