@@ -1,47 +1,66 @@
 package io.horizontalsystems.tonkit.sample
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
 
+@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun TonConnectScreen() {
+fun TonConnectScreen(navController: NavHostController) {
     val viewModel = viewModel<TonConnectViewModel>()
     val uiState = viewModel.uiState
 
-    Column {
-        var str by remember { mutableStateOf("") }
-
-        TextField(
-            value = str,
-            onValueChange = {
-                str = it
-                viewModel.setUrl(it)
-            },
-            label = { Text("URL") },
-        )
-
-        Button(onClick = viewModel::readData) {
-            Text("Read Data")
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = { navController.navigate(TonConnectNewConnection) }) {
+                Text("+")
+            }
         }
+    ) {
+        Column(modifier = Modifier.padding(it)) {
+            if (uiState.dApps.isEmpty()) {
+                Text("No connected DApps")
+            } else {
+                Text("DApps:")
+                HorizontalDivider()
 
-        uiState.dAppRequestEntity?.let { dAppRequestEntity ->
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text("Request: $dAppRequestEntity")
-            Button(onClick = viewModel::connect) {
-                Text("Connect")
+                LazyColumn {
+                    items(uiState.dApps) { dApp ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp)
+                        ) {
+                            Row(modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)) {
+                                GlideImage(
+                                    modifier = Modifier.size(80.dp),
+                                    model = dApp.manifest.iconUrl,
+                                    contentDescription = "",
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(dApp.manifest.name)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

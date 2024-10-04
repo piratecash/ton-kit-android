@@ -1,5 +1,6 @@
 package io.horizontalsystems.tonkit.tonconnect
 
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.tonapps.blockchain.ton.TonNetwork
@@ -22,9 +23,9 @@ import com.tonapps.wallet.data.tonconnect.entities.reply.DAppEventSuccessEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppProofItemReplySuccess
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppReply
 import io.horizontalsystems.tonkit.core.TonKit
-import kotlinx.coroutines.CoroutineScope
+import io.horizontalsystems.tonkit.tonconnect.event.TonConnectEventManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.ton.api.pk.PrivateKeyEd25519
@@ -33,8 +34,12 @@ import org.ton.block.AddrStd
 import org.ton.block.StateInit
 import org.ton.crypto.base64
 
-class TonConnectKit {
-    private val api = API()
+class TonConnectKit(
+    private val dAppManager: DAppManager,
+    private val tonConnectEventManager: TonConnectEventManager,
+    private val api: API
+) {
+
 
     fun readData(uriString: String): DAppRequestEntity {
         val uri = Uri.parse(uriString)
@@ -47,14 +52,13 @@ class TonConnectKit {
     }
 
     suspend fun connect(dAppRequestEntity: DAppRequestEntity, walletType: TonKit.WalletType, testnet: Boolean): DAppEventSuccessEntity {
-        val request = dAppRequestEntity
-        val manifest = getManifest(request.payload.manifestUrl)
+        val manifest = getManifest(dAppRequestEntity.payload.manifestUrl)
 
         val data = TCData(
             manifest = manifest,
             accountId = walletType.address.toRaw(),
-            clientId = request.id,
-            items = request.payload.items,
+            clientId = dAppRequestEntity.id,
+            items = dAppRequestEntity.payload.items,
             testnet = testnet,
         )
 
@@ -82,7 +86,7 @@ class TonConnectKit {
 //        val enablePush = firebaseToken != null
         val app = newApp(manifest, wallet.accountId, wallet.testnet, clientId, wallet.id, false)
 
-        xxxApp(app)
+        dAppManager.addApp(app)
 
         val items = createItems(app, wallet, privateKey, requestItems)
         val res = DAppEventSuccessEntity(items)
@@ -91,16 +95,6 @@ class TonConnectKit {
 //            subscribePush(wallet, app, it)
 //        }
         res.copy()
-    }
-
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
-
-    private fun xxxApp(app: DAppEntity) {
-        coroutineScope.launch {
-            api.tonconnectEvents(listOf(app.publicKeyHex), null).collect {
-                Log.e("AAA", "Event: $it")
-            }
-        }
     }
 
     suspend fun send(
@@ -220,6 +214,35 @@ class TonConnectKit {
         return DAppManifestEntity(JSONObject(response))
     }
 
+    fun getDApps(): Flow<List<DAppEntity>> {
+        return dAppManager.getAllFlow()
+    }
+
+    fun start() {
+        tonConnectEventManager.start()
+    }
+
+    fun stop() {
+        tonConnectEventManager.stop()
+    }
+
+    companion object {
+        fun getInstance(context: Context): TonConnectKit {
+            val api = API()
+            val database = TonConnectKitDatabase.getInstance(context, "ton-connect")
+            val dAppManager = DAppManager(database.dAppDao())
+            val localStorage = LocalStorage()
+            val tonConnectEventManager = TonConnectEventManager(dAppManager, api, localStorage)
+                .apply {
+                    registerHandler(EventHandlerDisconnect(dAppManager))
+                }
+
+            return TonConnectKit(dAppManager, tonConnectEventManager, api)
+        }
+    }
 }
 
-class UriError(message: String) : Error(message)
+sealed class TonConnectError : Error()
+
+class UriError(override val message: String) : TonConnectError()
+

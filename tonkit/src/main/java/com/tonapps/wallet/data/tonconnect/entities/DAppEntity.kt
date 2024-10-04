@@ -2,6 +2,9 @@ package com.tonapps.wallet.data.tonconnect.entities
 
 import android.net.Uri
 import android.os.Parcelable
+import androidx.room.Embedded
+import androidx.room.Entity
+import androidx.room.Ignore
 import com.tonapps.security.CryptoBox
 import com.tonapps.security.Sodium
 import com.tonapps.security.hex
@@ -10,20 +13,25 @@ import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
+@Entity(primaryKeys = ["walletId", "url"])
 data class DAppEntity(
     val url: String,
     val walletId: String,
     val accountId: String,
     val testnet: Boolean,
     val clientId: String,
+    @Embedded(prefix = "keypair_")
     val keyPair: CryptoBox.KeyPair,
     val enablePush: Boolean = false,
+    @Embedded(prefix = "manifest_")
     val manifest: DAppManifestEntity,
 ): Parcelable {
 
+    @Ignore
     @IgnoredOnParcel
     val uri: Uri = Uri.parse(url)
 
+    @Ignore
     @IgnoredOnParcel
     val domain = ProofDomainEntity(uri.host!!)
 

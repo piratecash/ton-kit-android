@@ -4,6 +4,7 @@ import android.app.Application
 import io.horizontalsystems.tonkit.core.TonKit
 import io.horizontalsystems.tonkit.core.TonKit.WalletType
 import io.horizontalsystems.tonkit.models.Network
+import io.horizontalsystems.tonkit.tonconnect.TonConnectKit
 
 class App : Application() {
 
@@ -22,6 +23,8 @@ class App : Application() {
             this,
             walletId
         )
+
+        tonConnectKit = TonConnectKit.getInstance(this)
     }
 
     companion object {
@@ -31,5 +34,6 @@ class App : Application() {
 //        val walletType = WalletType.Mnemonic(words, "")
 
         lateinit var tonKit: TonKit
+        lateinit var tonConnectKit: TonConnectKit
     }
 }
