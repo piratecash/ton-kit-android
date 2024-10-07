@@ -21,4 +21,5 @@ interface IApi {
     suspend fun getRawTime(): Int
     suspend fun estimateFee(boc: String): BigInteger
     suspend fun send(boc: String)
+    suspend fun getAccountSeqno(address: String): Int
 }

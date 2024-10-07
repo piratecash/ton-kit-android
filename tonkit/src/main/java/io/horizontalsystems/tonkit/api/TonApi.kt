@@ -1,9 +1,9 @@
 package io.horizontalsystems.tonkit.api
 
+import com.tonapps.blockchain.ton.extensions.base64
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.AccountStatus
-import io.horizontalsystems.tonkit.models.Action
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.JettonBalance
@@ -17,8 +17,12 @@ import io.tonapi.apis.JettonsApi
 import io.tonapi.apis.LiteServerApi
 import io.tonapi.apis.WalletApi
 import io.tonapi.models.EmulateMessageToWalletRequest
+import io.tonapi.models.MessageConsequences
 import io.tonapi.models.SendBlockchainMessageRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import org.ton.cell.Cell
 import java.math.BigInteger
 
 class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
@@ -31,7 +35,7 @@ class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
     private val walletApi = WalletApi(basePath, okHttpClient)
     private val jettonsApi = JettonsApi(basePath, okHttpClient)
     private val liteServerApi = LiteServerApi(basePath, okHttpClient)
-    private val emulationApi = EmulationApi(basePath, okHttpClient)
+    val emulationApi = EmulationApi(basePath, okHttpClient)
     private val blockchainApi = BlockchainApi(basePath, okHttpClient)
 
     override suspend fun getAccount(address: Address): Account {
@@ -69,23 +73,15 @@ class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
             startDate = startTimestamp
         )
 
-        return events.events.map { event ->
-            Event(
-                id = event.eventId,
-                event.lt,
-                event.timestamp,
-                event.isScam,
-                event.inProgress,
-                event.extra,
-                event.actions.map { action ->
-                    Action.fromApi(action)
-                }
-            )
-        }
+        return events.events.map(Event.Companion::fromApi)
     }
 
     override suspend fun getAccountSeqno(address: Address): Int {
-        return walletApi.getAccountSeqno(address.toRaw()).seqno
+        return getAccountSeqno(address.toRaw())
+    }
+
+    override suspend fun getAccountSeqno(address: String): Int {
+        return walletApi.getAccountSeqno(address).seqno
     }
 
     override suspend fun getJettonInfo(address: Address): Jetton {
@@ -107,4 +103,21 @@ class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
         val request = SendBlockchainMessageRequest(boc)
         blockchainApi.sendBlockchainMessage(request)
     }
+
+    suspend fun emulate(
+        boc: String,
+        testnet: Boolean,
+    ): MessageConsequences = withContext(Dispatchers.IO) {
+        val request = EmulateMessageToWalletRequest(boc)
+        emulationApi.emulateMessageToWallet(request)
+    }
+
+    suspend fun emulate(
+        cell: Cell,
+        testnet: Boolean,
+    ): MessageConsequences {
+        return emulate(cell.base64(), testnet)
+    }
+
+
 }

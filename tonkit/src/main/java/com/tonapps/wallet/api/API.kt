@@ -11,10 +11,7 @@ import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
-class API(
-//    private val context: Context,
-//    private val scope: CoroutineScope
-) {
+class API {
 
     val defaultHttpClient = baseOkHttpClientBuilder().build()
 
@@ -255,21 +252,6 @@ class API(
             throw Exception("Failed sending event: ${response.code}")
         }
     }
-
-//    suspend fun emulate(
-//        boc: String,
-//        testnet: Boolean,
-//    ): MessageConsequences = withContext(Dispatchers.IO) {
-//        val request = EmulateMessageToWalletRequest(boc)
-//        emulation(testnet).emulateMessageToWallet(request)
-//    }
-//
-//    suspend fun emulate(
-//        cell: Cell,
-//        testnet: Boolean
-//    ): MessageConsequences {
-//        return emulate(cell.base64(), testnet)
-//    }
 
 //    suspend fun sendToBlockchain(
 //        boc: String,

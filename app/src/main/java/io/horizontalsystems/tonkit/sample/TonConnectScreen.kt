@@ -1,5 +1,6 @@
 package io.horizontalsystems.tonkit.sample
 
+import android.util.Log
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,18 +16,26 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun TonConnectScreen(navController: NavHostController) {
-    val viewModel = viewModel<TonConnectViewModel>()
+fun TonConnectScreen(navController: NavHostController, viewModel: TonConnectViewModel) {
     val uiState = viewModel.uiState
+    val sendRequest = uiState.pendingSendRequest
+    LaunchedEffect(sendRequest?.first?.id) {
+        Log.e("AAA", "TonConnectScreen: sendRequest: ${sendRequest?.first?.id}")
+        sendRequest?.let {
+            viewModel.onRequestHandled(sendRequest.first.id)
+            Log.e("AAA", "navController.navigate(TonConnectSendTransaction)")
+            navController.navigate(TonConnectSendTransaction)
+        }
+    }
 
     Scaffold(
         floatingActionButton = {

@@ -145,4 +145,9 @@ class TransactionSender(
 
         api.send(message.base64())
     }
+
+    suspend fun send(boc: String) {
+        api.send(boc)
+
+    }
 }

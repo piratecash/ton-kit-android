@@ -17,9 +17,10 @@ class App : Application() {
         val walletId = "wallet-${walletType.javaClass.simpleName}"
 //        val walletId = UUID.randomUUID().toString()
 
+        val network = Network.MainNet
         tonKit = TonKit.getInstance(
             walletType,
-            Network.MainNet,
+            network,
             this,
             walletId
         )

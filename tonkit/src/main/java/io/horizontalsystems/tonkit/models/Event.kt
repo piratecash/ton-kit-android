@@ -3,6 +3,7 @@ package io.horizontalsystems.tonkit.models
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import io.horizontalsystems.tonkit.Address
+import io.tonapi.models.AccountEvent
 
 @Entity
 data class Event(
@@ -138,6 +139,20 @@ data class Event(
         }
 
         return tags
+    }
+
+    companion object {
+        fun fromApi(event: AccountEvent) = Event(
+            event.eventId,
+            event.lt,
+            event.timestamp,
+            event.isScam,
+            event.inProgress,
+            event.extra,
+            event.actions.map { action ->
+                Action.fromApi(action)
+            }
+        )
     }
 }
 

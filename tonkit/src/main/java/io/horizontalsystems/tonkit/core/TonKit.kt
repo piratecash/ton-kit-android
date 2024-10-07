@@ -1,7 +1,15 @@
 package io.horizontalsystems.tonkit.core
 
 import android.content.Context
+import android.util.Log
 import com.tonapps.blockchain.ton.contract.WalletV4R2Contract
+import com.tonapps.blockchain.ton.contract.WalletVersion
+import com.tonapps.blockchain.ton.extensions.EmptyPrivateKeyEd25519
+import com.tonapps.blockchain.ton.extensions.base64
+import com.tonapps.wallet.data.account.Wallet
+import com.tonapps.wallet.data.account.entities.MessageBodyEntity
+import com.tonapps.wallet.data.account.entities.WalletEntity
+import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.TonApi
@@ -25,7 +33,8 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level
 import org.ton.api.pk.PrivateKeyEd25519
-import org.ton.mnemonic.Mnemonic
+import org.ton.cell.Cell
+import org.ton.contract.wallet.WalletTransfer
 import java.math.BigInteger
 
 class TonKit(
@@ -36,6 +45,7 @@ class TonKit(
     private val eventManager: EventManager,
     private val transactionSender: TransactionSender?,
     val network: Network,
+    private val api: TonApi,
 ) {
     val receiveAddress get() = address
 
@@ -133,6 +143,10 @@ class TonKit(
             ?: throw WalletError.WatchOnly
     }
 
+    suspend fun send(boc: String) {
+        transactionSender?.send(boc) ?: throw WalletError.WatchOnly
+    }
+
     fun startListener() {
         apiListener.start(address = address)
     }
@@ -154,6 +168,78 @@ class TonKit(
             },
         ).awaitAll()
     }
+
+    suspend fun sign(request: SendRequestEntity, walletType: WalletType): String {
+        val privateKey = walletType.privateKey!!
+        val walletEntity = WalletEntity(
+            id = "id",
+            publicKey = privateKey.publicKey(),
+            type = Wallet.Type.Default,
+            version = WalletVersion.V4R2,
+            label = Wallet.Label("", "", 0)
+        )
+
+        val seqno = api.getAccountSeqno(walletEntity.accountId)
+        val message = createSignedMessage(
+            walletEntity,
+            seqno,
+            privateKey,
+            request.validUntil,
+            request.transfers
+        )
+        return message.base64()
+    }
+
+    suspend fun getDetails(request: SendRequestEntity, walletType: WalletType): Event {
+        val publicKey = walletType.privateKey!!.publicKey()
+        val walletEntity = WalletEntity(
+            id = "id",
+            publicKey = publicKey,
+            type = Wallet.Type.Default,
+            version = WalletVersion.V4R2,
+            label = Wallet.Label("", "", 0)
+        )
+
+        return emulate(request, walletEntity)
+    }
+
+    private suspend fun emulate(
+        request: SendRequestEntity,
+        wallet: WalletEntity,
+    ): Event {
+
+        val seqno = api.getAccountSeqno(wallet.accountId)
+        val cell = createSignedMessage(wallet, seqno, EmptyPrivateKeyEd25519, request.validUntil, request.transfers)
+
+        val emulated = api.emulate(cell, wallet.testnet)
+        val event = Event.fromApi(emulated.event)
+
+        Log.e("AAA", "event: $event")
+
+        return event
+    }
+
+    fun messageBody(
+        wallet: WalletEntity,
+        seqno: Int,
+        validUntil: Long,
+        transfers: List<WalletTransfer>
+    ): MessageBodyEntity {
+        val body = wallet.createBody(seqno, validUntil, transfers)
+        return MessageBodyEntity(seqno, body, validUntil)
+    }
+
+    private fun createSignedMessage(
+        wallet: WalletEntity,
+        seqno: Int,
+        privateKeyEd25519: PrivateKeyEd25519,
+        validUntil: Long,
+        transfers: List<WalletTransfer>
+    ): Cell {
+        val data = messageBody(wallet, seqno, validUntil, transfers)
+        return wallet.sign(privateKeyEd25519, data.seqno, data.body)
+    }
+
 
     sealed class WalletType {
         val address get() = addressPrivateKeyPair.first
@@ -259,11 +345,12 @@ class TonKit(
                 jettonManager,
                 eventManager,
                 transactionSender,
-                network
+                network,
+                api
             )
         }
 
-        private fun getTonApi(network: Network) = TonApi(network, okHttpClient)
+        fun getTonApi(network: Network) = TonApi(network, okHttpClient)
 
         suspend fun getJetton(network: Network, address: Address): Jetton {
             return getTonApi(network).getJettonInfo(address)

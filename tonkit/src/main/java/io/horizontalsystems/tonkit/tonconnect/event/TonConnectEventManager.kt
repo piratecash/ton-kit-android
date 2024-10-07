@@ -12,6 +12,7 @@ import io.horizontalsystems.tonkit.tonconnect.LocalStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import org.ton.crypto.base64
@@ -73,25 +74,32 @@ class TonConnectEventManager(
 
         val method = jsonObject.getString("method")
         val params = jsonObject.getJSONArray("params")
-        val id = jsonObject.getString("id")
+        val requestId = jsonObject.getString("id")
 
         val handler = handlers[method]
 
         coroutineScope.launch {
-            val result = if (handler != null) {
-                handler.handle(id, params, dApp)
+            if (handler != null) {
+                handler.handle(requestId, params, dApp)
             } else {
                 Log.w("AAA", "No handler registered for method $method")
-                DAppErrorEntity.methodNotSupported(id)
+                responseToDApp(dApp, DAppErrorEntity.methodNotSupported(requestId))
             }
 
-            responseToDApp(dApp, result)
         }
     }
 
-    private fun responseToDApp(dApp: DAppEntity, response: DAppReply) {
+    fun responseToDApp(dApp: DAppEntity, response: DAppReply) {
         val responseBody = response.toJSON().toString()
         val encrypted = dApp.encrypt(responseBody)
         api.tonconnectSend(dApp.publicKeyHex, dApp.clientId, base64(encrypted))
+    }
+
+    suspend fun responseToDApp(dAppId: String, response: DAppReply) {
+        val dApps = dAppManager.getAllFlow().first()
+        val dApp = dApps.find { it.uniqueId == dAppId }
+        if (dApp != null) {
+            responseToDApp(dApp, response)
+        }
     }
 }

@@ -14,6 +14,7 @@ import com.tonapps.wallet.data.account.Wallet
 import com.tonapps.wallet.data.account.WalletProof
 import com.tonapps.wallet.data.account.entities.ProofDomainEntity
 import com.tonapps.wallet.data.account.entities.WalletEntity
+import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import com.tonapps.wallet.data.tonconnect.entities.DAppEntity
 import com.tonapps.wallet.data.tonconnect.entities.DAppItemEntity
 import com.tonapps.wallet.data.tonconnect.entities.DAppManifestEntity
@@ -23,6 +24,7 @@ import com.tonapps.wallet.data.tonconnect.entities.reply.DAppEventSuccessEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppProofItemReplySuccess
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppReply
 import io.horizontalsystems.tonkit.core.TonKit
+import io.horizontalsystems.tonkit.tonconnect.event.EventHandlerSendTransaction
 import io.horizontalsystems.tonkit.tonconnect.event.TonConnectEventManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -37,9 +39,18 @@ import org.ton.crypto.base64
 class TonConnectKit(
     private val dAppManager: DAppManager,
     private val tonConnectEventManager: TonConnectEventManager,
-    private val api: API
+    private val api: API,
+    private val eventHandlerSendTransaction: EventHandlerSendTransaction
 ) {
+    fun getFirstSendRequestFlow() = eventHandlerSendTransaction.getFirstFlow()
 
+    suspend fun reject(request: SendRequestEntity) {
+        eventHandlerSendTransaction.reject(request)
+    }
+
+    suspend fun approve(request: SendRequestEntity, boc: String) {
+        eventHandlerSendTransaction.approve(request, boc)
+    }
 
     fun readData(uriString: String): DAppRequestEntity {
         val uri = Uri.parse(uriString)
@@ -233,11 +244,22 @@ class TonConnectKit(
             val dAppManager = DAppManager(database.dAppDao())
             val localStorage = LocalStorage()
             val tonConnectEventManager = TonConnectEventManager(dAppManager, api, localStorage)
-                .apply {
-                    registerHandler(EventHandlerDisconnect(dAppManager))
-                }
 
-            return TonConnectKit(dAppManager, tonConnectEventManager, api)
+            val handler = EventHandlerDisconnect(dAppManager, tonConnectEventManager)
+            tonConnectEventManager.registerHandler(handler)
+
+            val eventHandlerSendTransaction = EventHandlerSendTransaction(
+                tonConnectEventManager,
+                database.sendRequestDao()
+            )
+            tonConnectEventManager.registerHandler(eventHandlerSendTransaction)
+
+            return TonConnectKit(
+                dAppManager,
+                tonConnectEventManager,
+                api,
+                eventHandlerSendTransaction
+            )
         }
     }
 }
