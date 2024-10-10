@@ -47,7 +47,8 @@ class TonConnectNewConnectionViewModel : ViewModel() {
                 val dAppRequestEntity = dAppRequestEntity
 
                 if (dAppRequestEntity != null) {
-                    val connect = tonConnectKit.connect(dAppRequestEntity, App.walletType, false)
+                    val manifest = tonConnectKit.getManifest(dAppRequestEntity.payload.manifestUrl)
+                    val connect = tonConnectKit.connect(dAppRequestEntity, manifest, App.walletType, false,)
                     Log.e("AAA", "connect: $connect")
                 }
                 connected = true

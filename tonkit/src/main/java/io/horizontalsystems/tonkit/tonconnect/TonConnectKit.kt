@@ -62,8 +62,12 @@ class TonConnectKit(
         return DAppRequestEntity(uri)
     }
 
-    suspend fun connect(dAppRequestEntity: DAppRequestEntity, walletType: TonKit.WalletType, testnet: Boolean): DAppEventSuccessEntity {
-        val manifest = getManifest(dAppRequestEntity.payload.manifestUrl)
+    suspend fun connect(
+        dAppRequestEntity: DAppRequestEntity,
+        manifest: DAppManifestEntity,
+        walletType: TonKit.WalletType,
+        testnet: Boolean
+    ): DAppEventSuccessEntity {
 
         val data = TCData(
             manifest = manifest,
@@ -86,7 +90,7 @@ class TonConnectKit(
         return connect(walletEntity, privateKey, data.manifest, data.clientId, data.items)
     }
 
-    suspend fun connect(
+    private suspend fun connect(
         wallet: WalletEntity,
         privateKey: PrivateKeyEd25519,
         manifest: DAppManifestEntity,
@@ -208,7 +212,7 @@ class TonConnectKit(
 
 
 
-    private fun getManifest(manifestUrl: String): DAppManifestEntity {
+    fun getManifest(manifestUrl: String): DAppManifestEntity {
         //            val local = localDataSource.getManifest(sourceUrl)
         //            if (local == null) {
         val remote = loadManifest(manifestUrl)
@@ -219,7 +223,7 @@ class TonConnectKit(
         //            }
     }
 
-    fun loadManifest(url: String): DAppManifestEntity {
+    private fun loadManifest(url: String): DAppManifestEntity {
         val response = api.defaultHttpClient.get(url)
         Log.d("APINewLog", "loadManifest: $response")
         return DAppManifestEntity(JSONObject(response))
