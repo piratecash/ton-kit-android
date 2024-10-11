@@ -42,7 +42,7 @@ class TonConnectKit(
     private val api: API,
     private val eventHandlerSendTransaction: EventHandlerSendTransaction
 ) {
-    fun getFirstSendRequestFlow() = eventHandlerSendTransaction.getFirstFlow()
+    val sendRequestFlow by eventHandlerSendTransaction::sendRequestFlow
 
     suspend fun reject(request: SendRequestEntity) {
         eventHandlerSendTransaction.reject(request)
@@ -62,9 +62,14 @@ class TonConnectKit(
         return DAppRequestEntity(uri)
     }
 
+    fun disconnect(dAppEntity: DAppEntity) {
+        TODO()
+    }
+
     suspend fun connect(
         dAppRequestEntity: DAppRequestEntity,
         manifest: DAppManifestEntity,
+        walletId: String,
         walletType: TonKit.WalletType,
         testnet: Boolean
     ): DAppEventSuccessEntity {
@@ -81,7 +86,7 @@ class TonConnectKit(
         val privateKey = walletType.privateKey ?: throw Exception("No private key")
 
         val walletEntity = WalletEntity(
-            id = "id",
+            id = walletId,
             publicKey = privateKey.publicKey(),
             type = Wallet.Type.Default,
             version = WalletVersion.V4R2,

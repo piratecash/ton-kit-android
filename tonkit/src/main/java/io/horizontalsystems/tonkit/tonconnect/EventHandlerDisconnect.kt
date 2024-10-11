@@ -12,7 +12,7 @@ class EventHandlerDisconnect(
 ) : ITonConnectEventHandler {
     override val method = "disconnect"
 
-    override fun handle(requestId: String, params: JSONArray, dApp: DAppEntity) {
+    override suspend fun handle(requestId: String, params: JSONArray, dApp: DAppEntity) {
         dAppManager.remove(dApp)
         tonConnectEventManager.responseToDApp(dApp, DAppSuccessEntity(requestId, "{}"))
     }

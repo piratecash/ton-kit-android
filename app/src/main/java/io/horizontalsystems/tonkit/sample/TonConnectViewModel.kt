@@ -39,9 +39,9 @@ class TonConnectViewModel : ViewModel() {
         }
 
         viewModelScope.launch(Dispatchers.Default) {
-            tonConnectKit.getFirstSendRequestFlow().collect {
-                Log.e("AAA", "first send request: ${it?.id}")
-                it?.let { it1 -> handleSendRequest(it1) }
+            tonConnectKit.sendRequestFlow.collect {
+                Log.e("AAA", "first send request: ${it.id}")
+                it.let { it1 -> handleSendRequest(it1) }
             }
         }
 

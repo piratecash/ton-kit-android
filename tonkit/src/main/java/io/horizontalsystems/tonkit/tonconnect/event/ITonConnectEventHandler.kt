@@ -5,5 +5,5 @@ import org.json.JSONArray
 
 interface ITonConnectEventHandler {
     val method: String
-    fun handle(requestId: String, params: JSONArray, dApp: DAppEntity)
+    suspend fun handle(requestId: String, params: JSONArray, dApp: DAppEntity)
 }
