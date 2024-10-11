@@ -251,7 +251,7 @@ class TonConnectKit(
             val api = API()
             val database = TonConnectKitDatabase.getInstance(context, "ton-connect")
             val dAppManager = DAppManager(database.dAppDao())
-            val localStorage = LocalStorage()
+            val localStorage = LocalStorage(database.keyValueDao())
             val tonConnectEventManager = TonConnectEventManager(dAppManager, api, localStorage)
 
             val handler = EventHandlerDisconnect(dAppManager, tonConnectEventManager)

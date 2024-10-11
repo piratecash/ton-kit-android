@@ -12,17 +12,20 @@ import com.tonapps.wallet.data.tonconnect.entities.DAppEntity
     entities = [
         DAppEntity::class,
         SendRequestEntity::class,
+        KeyValue::class,
     ],
-    version = 1,
+    version = 2,
 )
 @TypeConverters(TonConnectDBConverters::class)
 abstract class TonConnectKitDatabase : RoomDatabase() {
     abstract fun dAppDao(): DAppDao
     abstract fun sendRequestDao(): SendRequestDao
+    abstract fun keyValueDao(): KeyValueDao
 
     companion object {
         fun getInstance(context: Context, name: String): TonConnectKitDatabase {
             return Room.databaseBuilder(context, TonConnectKitDatabase::class.java, name)
+                .fallbackToDestructiveMigration()
                 .build()
         }
     }

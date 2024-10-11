@@ -1,11 +1,6 @@
 package io.horizontalsystems.tonkit.tonconnect
 
-class LocalStorage {
-    fun setLastSSEventId(v: String) {
-    }
-
-    fun getLastSSEventId(): String? {
-        return null
-    }
-
+class LocalStorage(private val keyValueDao: KeyValueDao) {
+    fun setLastSSEventId(v: String) = keyValueDao.set("LastSSEventId", v)
+    fun getLastSSEventId() = keyValueDao.get("LastSSEventId")
 }
