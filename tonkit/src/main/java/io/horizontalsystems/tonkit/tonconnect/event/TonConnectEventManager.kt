@@ -12,7 +12,9 @@ import io.horizontalsystems.tonkit.tonconnect.LocalStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import org.ton.crypto.base64
@@ -51,10 +53,14 @@ class TonConnectEventManager(
         collectEventsJob = coroutineScope.launch {
             val publicKeys = dApps.map { it.publicKeyHex }
 
-            api.tonconnectEvents(publicKeys, localStorage.getLastSSEventId()).collect {
-                Log.e("AAA", "SSE Event: $it")
-                processEvent(dApps, it)
-            }
+            api.tonconnectEvents(publicKeys, localStorage.getLastSSEventId())
+                .retry {
+                    delay(3000)
+                    true
+                }
+                .collect {
+                    processEvent(dApps, it)
+                }
         }
     }
 
