@@ -109,6 +109,12 @@ class TonConnectViewModel : ViewModel() {
         handledRequests.add(id)
     }
 
+    fun disconnect(dApp: DAppEntity) {
+        viewModelScope.launch(Dispatchers.Default) {
+            tonConnectKit.disconnect(dApp)
+        }
+    }
+
     data class UiState(
         val dApps: List<DAppEntity>,
         val close: Boolean,

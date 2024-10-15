@@ -63,7 +63,17 @@ class TonConnectKit(
     }
 
     fun disconnect(dAppEntity: DAppEntity) {
-        TODO()
+        val disconnect = object : DAppReply() {
+            override fun toJSON(): JSONObject {
+                val json = JSONObject()
+                json.put("event", "disconnect")
+                json.put("id", System.currentTimeMillis())
+                json.put("payload", "{ }")
+                return json
+            }
+        }
+        tonConnectEventManager.responseToDApp(dAppEntity, disconnect)
+        dAppManager.remove(dAppEntity)
     }
 
     suspend fun connect(
