@@ -207,7 +207,6 @@ class TonKit(
             walletId: String,
         ): TonKit {
             val address = tonWallet.address
-            val privateKey = tonWallet.privateKey
 
             val database = KitDatabase.getInstance(context, "${walletId}-${network.name}")
 
@@ -218,8 +217,12 @@ class TonKit(
             val jettonManager = JettonManager(address, api, database.jettonDao())
             val eventManager = EventManager(address, api, database.eventDao())
 
-            val transactionSender = privateKey?.let {
-                TransactionSender(api, address, it)
+            val transactionSender = when (tonWallet) {
+                is TonWallet.FullAccess -> {
+                    TransactionSender(api, address, tonWallet.privateKey)
+                }
+
+                is TonWallet.WatchOnly -> null
             }
 
             val apiListener = TonApiListener(network, okHttpClient)
