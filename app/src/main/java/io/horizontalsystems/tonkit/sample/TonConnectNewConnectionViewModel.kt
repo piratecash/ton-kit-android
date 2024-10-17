@@ -53,7 +53,6 @@ class TonConnectNewConnectionViewModel : ViewModel() {
                         manifest = manifest,
                         walletId = "walletId",
                         walletType = App.walletType,
-                        testnet = false,
                     )
                     Log.e("AAA", "connect: $connect")
                 }

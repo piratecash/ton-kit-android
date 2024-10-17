@@ -8,7 +8,6 @@ import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.network.get
 import com.tonapps.security.CryptoBox
-import com.tonapps.tonkeeper.core.tonconnect.models.TCData
 import com.tonapps.wallet.api.API
 import com.tonapps.wallet.data.account.Wallet
 import com.tonapps.wallet.data.account.WalletProof
@@ -80,19 +79,8 @@ class TonConnectKit(
         dAppRequestEntity: DAppRequestEntity,
         manifest: DAppManifestEntity,
         walletId: String,
-        walletType: TonKit.WalletType,
-        testnet: Boolean
+        walletType: TonKit.WalletType
     ): DAppEventSuccessEntity {
-
-        val data = TCData(
-            manifest = manifest,
-            accountId = walletType.address.toRaw(),
-            clientId = dAppRequestEntity.id,
-            items = dAppRequestEntity.payload.items,
-            testnet = testnet,
-        )
-
-
         val privateKey = walletType.privateKey ?: throw Exception("No private key")
 
         val walletEntity = WalletEntity(
@@ -102,7 +90,7 @@ class TonConnectKit(
             version = WalletVersion.V4R2,
             label = Wallet.Label("", "", 0)
         )
-        return connect(walletEntity, privateKey, data.manifest, data.clientId, data.items)
+        return connect(walletEntity, privateKey, manifest, dAppRequestEntity.id, dAppRequestEntity.payload.items)
     }
 
     private suspend fun connect(
