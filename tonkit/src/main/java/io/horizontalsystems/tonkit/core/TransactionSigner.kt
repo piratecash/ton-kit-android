@@ -8,7 +8,6 @@ import com.tonapps.wallet.data.account.entities.MessageBodyEntity
 import com.tonapps.wallet.data.account.entities.WalletEntity
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.api.TonApi
-import io.horizontalsystems.tonkit.core.TonKit.WalletType
 import io.horizontalsystems.tonkit.models.Event
 import org.ton.api.pk.PrivateKeyEd25519
 import org.ton.cell.Cell
@@ -16,8 +15,8 @@ import org.ton.contract.wallet.WalletTransfer
 
 class TransactionSigner(private val api: TonApi) {
 
-    suspend fun getDetails(request: SendRequestEntity, walletType: WalletType): Event {
-        val publicKey = walletType.privateKey!!.publicKey()
+    suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet): Event {
+        val publicKey = tonWallet.privateKey!!.publicKey()
         val walletEntity = WalletEntity(
             id = "id",
             publicKey = publicKey,
@@ -29,8 +28,8 @@ class TransactionSigner(private val api: TonApi) {
         return emulate(request, walletEntity)
     }
 
-    suspend fun sign(request: SendRequestEntity, walletType: WalletType): String {
-        val privateKey = walletType.privateKey!!
+    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet): String {
+        val privateKey = tonWallet.privateKey!!
         val walletEntity = WalletEntity(
             id = "id",
             publicKey = privateKey.publicKey(),

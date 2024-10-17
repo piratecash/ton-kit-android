@@ -52,7 +52,7 @@ class TonConnectNewConnectionViewModel : ViewModel() {
                         dAppRequestEntity = dAppRequestEntity,
                         manifest = manifest,
                         walletId = "walletId",
-                        walletType = App.walletType,
+                        tonWallet = App.tonWallet,
                     )
                     Log.e("AAA", "connect: $connect")
                 }

@@ -22,7 +22,7 @@ import com.tonapps.wallet.data.tonconnect.entities.reply.DAppAddressItemEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppEventSuccessEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppProofItemReplySuccess
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppReply
-import io.horizontalsystems.tonkit.core.TonKit
+import io.horizontalsystems.tonkit.core.TonWallet
 import io.horizontalsystems.tonkit.tonconnect.event.EventHandlerSendTransaction
 import io.horizontalsystems.tonkit.tonconnect.event.TonConnectEventManager
 import kotlinx.coroutines.Dispatchers
@@ -79,9 +79,9 @@ class TonConnectKit(
         dAppRequestEntity: DAppRequestEntity,
         manifest: DAppManifestEntity,
         walletId: String,
-        walletType: TonKit.WalletType
+        tonWallet: TonWallet
     ): DAppEventSuccessEntity {
-        val privateKey = walletType.privateKey ?: throw Exception("No private key")
+        val privateKey = tonWallet.privateKey ?: throw Exception("No private key")
 
         val walletEntity = WalletEntity(
             id = walletId,

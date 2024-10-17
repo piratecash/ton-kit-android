@@ -1,7 +1,6 @@
 package io.horizontalsystems.tonkit.core
 
 import android.content.Context
-import com.tonapps.blockchain.ton.contract.WalletV4R2Contract
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
@@ -25,7 +24,6 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level
-import org.ton.api.pk.PrivateKeyEd25519
 import java.math.BigInteger
 
 class TonKit(
@@ -160,55 +158,11 @@ class TonKit(
         ).awaitAll()
     }
 
-    suspend fun sign(request: SendRequestEntity, walletType: WalletType) =
-        transactionSigner.sign(request, walletType)
+    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet) =
+        transactionSigner.sign(request, tonWallet)
 
-    suspend fun getDetails(request: SendRequestEntity, walletType: WalletType) =
-        transactionSigner.getDetails(request, walletType)
-
-    sealed class WalletType {
-        val address get() = addressPrivateKeyPair.first
-        val privateKey get() = addressPrivateKeyPair.second
-
-        data class Watch(val addressStr: String) : WalletType()
-        data class Seed(val seed: ByteArray) : WalletType()
-        data class Mnemonic(val words: List<String>, val passphrase: String = "") : WalletType()
-
-        private val addressPrivateKeyPair: Pair<Address, PrivateKeyEd25519?> by lazy {
-            val address: Address
-            val privateKey: PrivateKeyEd25519?
-
-            when (this) {
-                is Mnemonic -> {
-                    val seed = org.ton.mnemonic.Mnemonic.toSeed(words, passphrase)
-                    privateKey = PrivateKeyEd25519(seed)
-
-                    val walletV4R2Contract =
-                        WalletV4R2Contract(publicKey = privateKey.publicKey())
-
-                    address = Address(walletV4R2Contract.address)
-                }
-
-                is Seed -> {
-                    privateKey = PrivateKeyEd25519(seed)
-
-                    val walletV4R2Contract =
-                        WalletV4R2Contract(publicKey = privateKey.publicKey())
-
-                    address = Address(walletV4R2Contract.address)
-                }
-
-                is Watch -> {
-                    privateKey = null
-                    address = Address.parse(this.addressStr)
-                }
-
-            }
-
-            Pair(address, privateKey)
-
-        }
-    }
+    suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet) =
+        transactionSigner.getDetails(request, tonWallet)
 
 //    enum WalletVersion {
 //        case v3
@@ -241,13 +195,13 @@ class TonKit(
         }
 
         fun getInstance(
-            type: WalletType,
+            tonWallet: TonWallet,
             network: Network,
             context: Context,
             walletId: String,
         ): TonKit {
-            val address = type.address
-            val privateKey = type.privateKey
+            val address = tonWallet.address
+            val privateKey = tonWallet.privateKey
 
             val database = KitDatabase.getInstance(context, "${walletId}-${network.name}")
 
