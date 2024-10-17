@@ -15,8 +15,8 @@ import org.ton.contract.wallet.WalletTransfer
 
 class TransactionSigner(private val api: TonApi) {
 
-    suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet): Event {
-        val publicKey = tonWallet.privateKey!!.publicKey()
+    suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet.FullAccess): Event {
+        val publicKey = tonWallet.privateKey.publicKey()
         val walletEntity = WalletEntity(
             id = "id",
             publicKey = publicKey,
@@ -28,8 +28,8 @@ class TransactionSigner(private val api: TonApi) {
         return emulate(request, walletEntity)
     }
 
-    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet): String {
-        val privateKey = tonWallet.privateKey!!
+    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet.FullAccess): String {
+        val privateKey = tonWallet.privateKey
         val walletEntity = WalletEntity(
             id = "id",
             publicKey = privateKey.publicKey(),

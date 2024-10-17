@@ -158,11 +158,17 @@ class TonKit(
         ).awaitAll()
     }
 
-    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet) =
-        transactionSigner.sign(request, tonWallet)
+    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet): String {
+        check(tonWallet is TonWallet.FullAccess)
 
-    suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet) =
-        transactionSigner.getDetails(request, tonWallet)
+        return transactionSigner.sign(request, tonWallet)
+    }
+
+    suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet): Event {
+        check(tonWallet is TonWallet.FullAccess)
+
+        return transactionSigner.getDetails(request, tonWallet)
+    }
 
 //    enum WalletVersion {
 //        case v3

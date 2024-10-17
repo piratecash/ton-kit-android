@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.tonapps.wallet.data.tonconnect.entities.DAppRequestEntity
+import io.horizontalsystems.tonkit.core.TonWallet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -48,6 +49,8 @@ class TonConnectNewConnectionViewModel : ViewModel() {
 
                 if (dAppRequestEntity != null) {
                     val manifest = tonConnectKit.getManifest(dAppRequestEntity.payload.manifestUrl)
+                    check(App.tonWallet is TonWallet.FullAccess)
+
                     val connect = tonConnectKit.connect(
                         dAppRequestEntity = dAppRequestEntity,
                         manifest = manifest,

@@ -79,9 +79,9 @@ class TonConnectKit(
         dAppRequestEntity: DAppRequestEntity,
         manifest: DAppManifestEntity,
         walletId: String,
-        tonWallet: TonWallet
+        tonWallet: TonWallet.FullAccess
     ): DAppEventSuccessEntity {
-        val privateKey = tonWallet.privateKey ?: throw Exception("No private key")
+        val privateKey = tonWallet.privateKey
 
         val walletEntity = WalletEntity(
             id = walletId,
