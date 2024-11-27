@@ -39,7 +39,9 @@ class TonConnectKit(
     private val dAppManager: DAppManager,
     private val tonConnectEventManager: TonConnectEventManager,
     private val api: API,
-    private val eventHandlerSendTransaction: EventHandlerSendTransaction
+    private val eventHandlerSendTransaction: EventHandlerSendTransaction,
+    private val appName: String,
+    private val appVersion: String,
 ) {
     val sendRequestFlow by eventHandlerSendTransaction::sendRequestFlow
 
@@ -107,7 +109,7 @@ class TonConnectKit(
         dAppManager.addApp(app)
 
         val items = createItems(app, wallet, privateKey, requestItems)
-        val res = DAppEventSuccessEntity(items)
+        val res = DAppEventSuccessEntity(items, appName, appVersion)
         send(app, res.toJSON())
 //        firebaseToken?.let {
 //            subscribePush(wallet, app, it)
@@ -245,7 +247,7 @@ class TonConnectKit(
     }
 
     companion object {
-        fun getInstance(context: Context): TonConnectKit {
+        fun getInstance(context: Context, appName: String, appVersion: String): TonConnectKit {
             val api = API()
             val database = TonConnectKitDatabase.getInstance(context, "ton-connect")
             val dAppManager = DAppManager(database.dAppDao())
@@ -265,7 +267,9 @@ class TonConnectKit(
                 dAppManager,
                 tonConnectEventManager,
                 api,
-                eventHandlerSendTransaction
+                eventHandlerSendTransaction,
+                appName,
+                appVersion
             )
         }
     }

@@ -4,11 +4,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 data class DAppDeviceEntity(
-    val platform: String = "android",
-    val appName: String = "Tonkeeper",
-    val appVersion: String = "3.4.0", // BuildConfig.VERSION_NAME,
+    val appName: String,
+    val appVersion: String,
     val maxProtocolVersion: Int = 2,
-    val features: List<String> = listOf("SendTransaction")
+    val features: List<String> = listOf("SendTransaction"),
+    val platform: String = "android",
 ): DAppReply() {
 
     override fun toJSON(): JSONObject {

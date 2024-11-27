@@ -4,7 +4,7 @@ import org.json.JSONObject
 
 data class DAppReplyPayloadEntity(
     val items: List<DAppReply> = mutableListOf(),
-    val device: DAppDeviceEntity = DAppDeviceEntity(),
+    val device: DAppDeviceEntity,
 ): DAppReply() {
 
     override fun toJSON(): JSONObject {

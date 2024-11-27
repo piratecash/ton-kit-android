@@ -25,7 +25,7 @@ class App : Application() {
             walletId
         )
 
-        tonConnectKit = TonConnectKit.getInstance(this)
+        tonConnectKit = TonConnectKit.getInstance(this, "Unstoppable Wallet", "0.41.0")
     }
 
     companion object {
