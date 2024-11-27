@@ -55,11 +55,6 @@ class TonConnectKit(
 
     fun readData(uriString: String): DAppRequestEntity {
         val uri = Uri.parse(uriString)
-
-        if (uri.scheme != "tc") {
-            throw UriError("Unknown scheme: ${uri.scheme}")
-        }
-
         return DAppRequestEntity(uri)
     }
 
