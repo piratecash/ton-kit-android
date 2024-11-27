@@ -434,7 +434,7 @@ class API {
 
     companion object {
 
-        const val BRIDGE_URL = "https://bridge.tonapi.io/bridge"
+        const val BRIDGE_URL = "https://bridge.unstoppable.money/bridge"
 
         val JSON = Json {
             prettyPrint = true
