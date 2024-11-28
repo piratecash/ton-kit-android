@@ -121,7 +121,7 @@ class TonConnectKit(
         app: DAppEntity,
         body: String,
     ) = withContext(Dispatchers.IO) {
-        Log.e("AAA", "send body: $body")
+        Log.i("AAA", "send body: $body")
         val encrypted = app.encrypt(body)
         api.tonconnectSend(app.publicKeyHex, app.clientId, base64(encrypted))
     }

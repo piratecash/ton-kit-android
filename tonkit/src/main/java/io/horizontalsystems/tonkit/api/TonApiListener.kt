@@ -24,10 +24,6 @@ class TonApiListener(val network: Network, okHttpClient: OkHttpClient) : IApiLis
     }
 
     private var state = State.Disconnected
-        set(value) {
-            field = value
-            Log.e("AAA", "TonApiListener: state: $value")
-        }
     private var address: Address? = null
     private var streamingAPI: StreamingAPI
 
@@ -85,22 +81,17 @@ class TonApiListener(val network: Network, okHttpClient: OkHttpClient) : IApiLis
     }
 
     private suspend fun handleEvent(ssEvent: SSEvent) {
-        Log.e("AAA", "ssEvent: $ssEvent")
-        Log.e("AAA", "yahoo")
-
+        Log.i("AAA", "ssEvent: $ssEvent")
         val json = ssEvent.json
-        Log.e("AAA", "json: $json")
+        Log.i("AAA", "json: $json")
         try {
             if (json.has("tx_hash")) {
-                Log.e("AAA", "try emitting")
-                val tryEmit = _transactionFlow.emit(json.getString("tx_hash"))
-//                val tryEmit = _transactionFlow.tryEmit(json.getString("tx_hash"))
-                Log.e("AAA", "try emitting result: $tryEmit")
+                _transactionFlow.emit(json.getString("tx_hash"))
             } else {
                 val keys = Iterable {
                     json.keys()
                 }.joinToString(",")
-                Log.e("AAA", "no tx_hash, keys: $keys")
+                Log.i("AAA", "no tx_hash, keys: $keys")
             }
 
         } catch (e: Throwable) {

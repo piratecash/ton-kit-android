@@ -85,7 +85,7 @@ fun OkHttpClient.sse(url: String): Flow<SSEvent> = callbackFlow<SSEvent> {
         }
 
         override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
-            Log.e("TonConnectBridge", "SSE failure($response)", t)
+            Log.d("TonConnectBridge", "SSE failure($response)", t)
             this@callbackFlow.close(t)
         }
 
