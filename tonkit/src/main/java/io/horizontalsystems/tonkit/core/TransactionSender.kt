@@ -11,6 +11,7 @@ import com.tonapps.wallet.data.account.entities.WalletEntity
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.TonApi
+import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
 import org.ton.api.pk.PrivateKeyEd25519
 import java.math.BigInteger
 
@@ -50,8 +51,9 @@ class TransactionSender(
             true
         )
         val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
+        val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), 1_000_000_000))
 
-        return api.estimateFee(message.base64())
+        return api.estimateFee(message.base64(), params)
     }
 
     private suspend fun getTonTransferEntity(
@@ -99,8 +101,9 @@ class TransactionSender(
             false
         )
         val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
+        val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), 1_000_000_000))
 
-        return api.estimateFee(message.base64())
+        return api.estimateFee(message.base64(), params)
 
     }
 

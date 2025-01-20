@@ -17,6 +17,7 @@ import io.tonapi.apis.JettonsApi
 import io.tonapi.apis.LiteServerApi
 import io.tonapi.apis.WalletApi
 import io.tonapi.models.EmulateMessageToWalletRequest
+import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
 import io.tonapi.models.MessageConsequences
 import io.tonapi.models.SendBlockchainMessageRequest
 import kotlinx.coroutines.Dispatchers
@@ -93,8 +94,11 @@ class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
         return liteServerApi.getRawTime().time
     }
 
-    override suspend fun estimateFee(boc: String): BigInteger {
-        val request = EmulateMessageToWalletRequest(boc)
+    override suspend fun estimateFee(
+        boc: String,
+        params: List<EmulateMessageToWalletRequestParamsInner>?
+    ): BigInteger {
+        val request = EmulateMessageToWalletRequest(boc, params)
         val result = emulationApi.emulateMessageToWallet(request)
         return BigInteger.valueOf(result.trace.transaction.totalFees)
     }
