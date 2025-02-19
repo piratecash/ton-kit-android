@@ -6,6 +6,7 @@ import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.api.TonApiListener
+import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.EventInfo
 import io.horizontalsystems.tonkit.models.Jetton
@@ -97,6 +98,10 @@ class TonKit(
 
     fun tagTokens(): List<TagToken> {
         return eventManager.tagTokens()
+    }
+
+    suspend fun getAccount(network: Network, address: Address): Account {
+        return getTonApi(network).getAccount(address)
     }
 
     suspend fun estimateFee(
