@@ -62,4 +62,17 @@ class EventHandlerSendTransaction(
         )
     }
 
+    suspend fun badRequest(request: SendRequestEntity) {
+        removePendingRequest(request)
+
+        tonConnectEventManager.responseToDApp(
+            request.dAppId,
+            DAppErrorEntity(
+                id = request.tonConnectRequestId,
+                errorCode = 1,
+                errorMessage = "Bad request"
+            )
+        )
+    }
+
 }

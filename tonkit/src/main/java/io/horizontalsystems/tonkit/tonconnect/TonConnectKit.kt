@@ -49,6 +49,10 @@ class TonConnectKit(
         eventHandlerSendTransaction.reject(request)
     }
 
+    suspend fun badRequest(request: SendRequestEntity) {
+        eventHandlerSendTransaction.badRequest(request)
+    }
+
     suspend fun approve(request: SendRequestEntity, boc: String) {
         eventHandlerSendTransaction.approve(request, boc)
     }
