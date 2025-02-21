@@ -3,10 +3,9 @@ package com.tonapps.wallet.data.core.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.tonapps.blockchain.ton.TonNetwork
-import kotlinx.datetime.Clock
+import com.tonapps.extensions.currentTimeSeconds
 import org.json.JSONArray
 import org.json.JSONObject
-import kotlin.time.Duration.Companion.seconds
 
 @Entity
 data class SendRequestEntity(
@@ -17,7 +16,7 @@ data class SendRequestEntity(
     val id: Int = 0
 ) {
     val fromValue by lazy { parseFrom(data) }
-    val validUntil by lazy { data.optLong("_", (Clock.System.now() + 60.seconds).epochSeconds) }
+    val validUntil by lazy { parseValidUnit(data) }
     val messages by lazy { parseMessages(data.getJSONArray("messages")) }
     val network by lazy { parseNetwork(data.opt("network")) }
     val transfers by lazy { messages.map { it.walletTransfer } }
@@ -58,6 +57,26 @@ data class SendRequestEntity(
             } else {
                 TonNetwork.MAINNET
             }
+        }
+
+        private fun parseValidUnit(json: JSONObject): Long {
+            val value = json.opt("valid_until") ?: json.opt("validUntil")
+            if (value == null) {
+                return 0
+            }
+            val validUnit = when (value) {
+                is Long -> value
+                is Int -> value.toLong()
+                is String -> value.toLongOrNull() ?: throw IllegalArgumentException("Invalid validUntil parameter. Expected: int64 (Like ${currentTimeSeconds()}), Received: $value")
+                else -> throw IllegalArgumentException("Invalid validUntil parameter. Expected: int64 (Like ${currentTimeSeconds()}), Received: $value")
+            }
+            if (validUnit > 1000000000000) {
+                return validUnit / 1000
+            }
+            if (validUnit > 1000000000) {
+                return validUnit
+            }
+            return 0
         }
     }
 }
