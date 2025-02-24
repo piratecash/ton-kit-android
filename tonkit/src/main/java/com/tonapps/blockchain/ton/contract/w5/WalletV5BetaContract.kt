@@ -48,6 +48,8 @@ class WalletV5BetaContract(
         return SignaturePosition.Tail
     }
 
+    override val maxMessages: Int = 255
+
     override fun getCode(): Cell {
         return CODE
     }

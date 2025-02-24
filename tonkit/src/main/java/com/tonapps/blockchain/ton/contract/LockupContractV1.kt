@@ -28,6 +28,8 @@ class LockupContractV1(
         }
     }
 
+    override val maxMessages: Int = 4
+
     /*
 
 

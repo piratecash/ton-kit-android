@@ -7,7 +7,7 @@ data class DAppDeviceEntity(
     val appName: String,
     val appVersion: String,
     val maxProtocolVersion: Int = 2,
-    val features: List<String> = listOf("SendTransaction"),
+    val maxMessages: Int,
     val platform: String = "android",
 ): DAppReply() {
 
@@ -17,7 +17,21 @@ data class DAppDeviceEntity(
         json.put("appName", appName)
         json.put("appVersion", appVersion)
         json.put("maxProtocolVersion", maxProtocolVersion)
-        json.put("features", JSONArray(features))
+        json.put("features", features(maxMessages))
+        return json
+    }
+
+    private fun features(maxMessages: Int): JSONArray {
+        val array = JSONArray()
+        array.put("SendTransaction")
+        array.put(sendTransactionFeature(maxMessages))
+        return array
+    }
+
+    private fun sendTransactionFeature(maxMessages: Int): JSONObject {
+        val json = JSONObject()
+        json.put("name", "SendTransaction")
+        json.put("maxMessages", maxMessages)
         return json
     }
 }

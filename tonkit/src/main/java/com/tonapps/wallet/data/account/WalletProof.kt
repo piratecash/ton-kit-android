@@ -20,10 +20,9 @@ object WalletProof {
         address: AddrStd,
         secretKey: PrivateKeyEd25519,
         payload: String,
-        stateInit: String,
     ): ProofEntity {
         val domain = ProofDomainEntity("tonkeeper.com")
-        return sign(address, secretKey, payload, domain, stateInit)
+        return sign(address, secretKey, payload, domain)
     }
 
     fun sign(
@@ -31,7 +30,6 @@ object WalletProof {
         secretKey: PrivateKeyEd25519,
         payload: String,
         domain: ProofDomainEntity,
-        stateInit: String,
     ): ProofEntity {
         val timestamp = System.currentTimeMillis() / 1000L
         val message = createMessage(timestamp, payload.toByteArray(), domain, address)
@@ -45,7 +43,6 @@ object WalletProof {
             domain = domain,
             payload = payload,
             signature = base64(signature),
-            stateInit = stateInit,
         )
     }
 

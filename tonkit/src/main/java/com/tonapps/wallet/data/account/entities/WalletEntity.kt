@@ -39,6 +39,9 @@ data class WalletEntity(
         BaseWalletContract.create(publicKey, version.title, network)
     }
 
+    val maxMessages: Int
+        get() = contract.maxMessages
+
     val testnet: Boolean
         get() = type == Wallet.Type.Testnet
 

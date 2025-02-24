@@ -7,7 +7,6 @@ data class ProofEntity(
     val domain: ProofDomainEntity,
     val payload: String?,
     val signature: String,
-    val stateInit: String? = null
 ) {
 
     fun toJSON(): JSONObject {
@@ -16,7 +15,6 @@ data class ProofEntity(
         json.put("domain", domain.toJSON())
         json.put("payload", payload)
         json.put("signature", signature)
-        json.put("stateInit", stateInit)
         return json
     }
 

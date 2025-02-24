@@ -32,6 +32,8 @@ open class WalletV4R1Contract(
         }
     }
 
+    override val maxMessages: Int = 4
+
     override fun getCode(): Cell {
         return CODE
     }
