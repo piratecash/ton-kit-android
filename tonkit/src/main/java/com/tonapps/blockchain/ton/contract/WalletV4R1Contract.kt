@@ -45,9 +45,10 @@ open class WalletV4R1Contract(
         queryId: BigInt?,
         vararg gifts: WalletTransfer
     ): Cell {
-        if (gifts.size > 4) {
-            throw IllegalArgumentException("Maximum number of messages in a single transfer is 4")
+        if (gifts.size > maxMessages) {
+            throw IllegalArgumentException("Maximum number of messages in a single transfer is $maxMessages")
         }
+
         return CellBuilder.createCell {
             storeUInt(walletId, 32)
             if (seqno == 0) {

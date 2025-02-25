@@ -84,8 +84,8 @@ class WalletV5BetaContract(
         queryId: BigInt?,
         vararg gifts: WalletTransfer
     ): Cell {
-        if (gifts.size > 255) {
-            throw IllegalArgumentException("Maximum number of messages in a single transfer is 255")
+        if (gifts.size > maxMessages) {
+            throw IllegalArgumentException("Maximum number of messages in a single transfer is $maxMessages")
         }
 
         val opCode = if (messageType === MessageType.Internal) OpCodes.AuthSignedInternal.code else OpCodes.AuthSigned.code
