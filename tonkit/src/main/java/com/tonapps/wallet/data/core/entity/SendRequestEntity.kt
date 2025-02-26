@@ -6,6 +6,7 @@ import com.tonapps.blockchain.ton.TonNetwork
 import com.tonapps.extensions.currentTimeSeconds
 import org.json.JSONArray
 import org.json.JSONObject
+import org.ton.block.AddrStd
 
 @Entity
 data class SendRequestEntity(
@@ -20,6 +21,12 @@ data class SendRequestEntity(
     val messages by lazy { parseMessages(data.getJSONArray("messages")) }
     val network by lazy { parseNetwork(data.opt("network")) }
     val transfers by lazy { messages.map { it.walletTransfer } }
+
+    val from: AddrStd?
+        get() {
+            val value = fromValue ?: return null
+            return AddrStd.parse(value)
+        }
 
     private companion object {
 

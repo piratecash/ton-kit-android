@@ -5,6 +5,7 @@ import com.tonapps.wallet.data.tonconnect.entities.DAppEntity
 import com.tonapps.wallet.data.tonconnect.entities.DAppEventEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppErrorEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppSuccessEntity
+import io.horizontalsystems.tonkit.models.SignTransaction
 import io.horizontalsystems.tonkit.tonconnect.SendRequestDao
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -16,7 +17,7 @@ class EventHandlerSendTransaction(
 ) : ITonConnectEventHandler {
     override val method = "sendTransaction"
 
-    private val _sendRequestFlow = MutableSharedFlow<SendRequestEntity>()
+    private val _sendRequestFlow = MutableSharedFlow<SignTransaction>()
     val sendRequestFlow = _sendRequestFlow.asSharedFlow()
 
     override suspend fun handle(requestId: String, params: JSONArray, dApp: DAppEntity) {
@@ -24,13 +25,13 @@ class EventHandlerSendTransaction(
             val param = DAppEventEntity.parseParam(params.get(i))
             val request = SendRequestEntity(param, requestId, dApp.uniqueId)
 
-            addPendingRequest(request)
+            addPendingRequest(request, dApp)
         }
     }
 
-    private suspend fun addPendingRequest(request: SendRequestEntity) {
+    private suspend fun addPendingRequest(request: SendRequestEntity, dApp: DAppEntity) {
         sendRequestDao.save(request)
-        _sendRequestFlow.emit(request)
+        _sendRequestFlow.emit(SignTransaction(request, dApp))
     }
 
     private fun removePendingRequest(request: SendRequestEntity) {
