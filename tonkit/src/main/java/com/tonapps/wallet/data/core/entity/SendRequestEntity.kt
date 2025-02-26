@@ -3,6 +3,7 @@ package com.tonapps.wallet.data.core.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.tonapps.blockchain.ton.TonNetwork
+import com.tonapps.blockchain.ton.extensions.toAccountId
 import com.tonapps.extensions.currentTimeSeconds
 import org.json.JSONArray
 import org.json.JSONObject
@@ -22,10 +23,10 @@ data class SendRequestEntity(
     val network by lazy { parseNetwork(data.opt("network")) }
     val transfers by lazy { messages.map { it.walletTransfer } }
 
-    val from: AddrStd?
+    val fromAccountId: String?
         get() {
             val value = fromValue ?: return null
-            return AddrStd.parse(value)
+            return AddrStd.parse(value).toAccountId()
         }
 
     private companion object {
