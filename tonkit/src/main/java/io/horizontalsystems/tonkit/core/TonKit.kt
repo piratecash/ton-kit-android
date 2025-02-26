@@ -100,10 +100,6 @@ class TonKit(
         return eventManager.tagTokens()
     }
 
-    suspend fun getAccount(network: Network, address: Address): Account {
-        return getTonApi(network).getAccount(address)
-    }
-
     suspend fun estimateFee(
         recipient: FriendlyAddress,
         amount: SendAmount,
