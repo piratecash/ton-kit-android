@@ -49,6 +49,10 @@ class TonConnectKit(
         eventHandlerSendTransaction.reject(request)
     }
 
+    suspend fun badRequest(request: SendRequestEntity) {
+        eventHandlerSendTransaction.badRequest(request)
+    }
+
     suspend fun approve(request: SendRequestEntity, boc: String) {
         eventHandlerSendTransaction.approve(request, boc)
     }
@@ -104,7 +108,7 @@ class TonConnectKit(
         dAppManager.addApp(app)
 
         val items = createItems(app, wallet, privateKey, requestItems)
-        val res = DAppEventSuccessEntity(items, appName, appVersion)
+        val res = DAppEventSuccessEntity(items, appName, appVersion, wallet.maxMessages)
         send(app, res.toJSON())
 //        firebaseToken?.let {
 //            subscribePush(wallet, app, it)
@@ -147,7 +151,6 @@ class TonConnectKit(
                     domain = app.domain,
                     address = wallet.contract.address,
                     privateWalletKey = privateKey,
-                    stateInit = wallet.contract.getStateCell().base64()
                 ))
             }
         }
@@ -159,14 +162,12 @@ class TonConnectKit(
         domain: ProofDomainEntity,
         address: AddrStd,
         privateWalletKey: PrivateKeyEd25519,
-        stateInit: String,
     ): DAppProofItemReplySuccess {
         val proof = WalletProof.sign(
             address,
             privateWalletKey,
             payload,
             domain,
-            stateInit
         )
         return DAppProofItemReplySuccess(proof = proof)
     }

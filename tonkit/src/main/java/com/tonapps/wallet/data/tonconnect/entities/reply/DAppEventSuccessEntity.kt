@@ -8,9 +8,9 @@ data class DAppEventSuccessEntity(
     val payload: DAppReplyPayloadEntity,
 ): DAppReply() {
 
-    constructor(items: List<DAppReply>, appName: String, appVersion: String): this(payload = DAppReplyPayloadEntity(
+    constructor(items: List<DAppReply>, appName: String, appVersion: String, maxMessages: Int): this(payload = DAppReplyPayloadEntity(
         items,
-        DAppDeviceEntity(appName = appName, appVersion = appVersion)
+        DAppDeviceEntity(appName = appName, appVersion = appVersion, maxMessages = maxMessages)
     ))
 
     override fun toJSON(): JSONObject {

@@ -106,6 +106,8 @@ abstract class BaseWalletContract(
         SmartContract.address(workchain, stateInit)
     }
 
+    abstract val maxMessages: Int
+
     abstract fun getStateCell(): Cell
 
     abstract fun getCode(): Cell

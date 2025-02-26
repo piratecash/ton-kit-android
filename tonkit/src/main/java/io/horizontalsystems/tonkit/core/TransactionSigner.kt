@@ -12,6 +12,7 @@ import io.horizontalsystems.tonkit.models.Event
 import org.ton.api.pk.PrivateKeyEd25519
 import org.ton.cell.Cell
 import org.ton.contract.wallet.WalletTransfer
+import kotlin.math.min
 
 class TransactionSigner(private val api: TonApi) {
 
@@ -43,7 +44,7 @@ class TransactionSigner(private val api: TonApi) {
             walletEntity,
             seqno,
             privateKey,
-            request.validUntil,
+            getSafeValidUntil(request.validUntil),
             request.transfers
         )
         return message.base64()
@@ -55,7 +56,7 @@ class TransactionSigner(private val api: TonApi) {
             wallet,
             seqno,
             EmptyPrivateKeyEd25519,
-            request.validUntil,
+            getSafeValidUntil(request.validUntil),
             request.transfers
         )
 
@@ -82,6 +83,17 @@ class TransactionSigner(private val api: TonApi) {
     ): MessageBodyEntity {
         val body = wallet.createBody(seqno, validUntil, transfers)
         return MessageBodyEntity(seqno, body, validUntil)
+    }
+
+    private suspend fun TransactionSigner.getSafeValidUntil(validUntil: Long): Long {
+        return min(safeTimeout(), validUntil)
+    }
+
+    private suspend fun safeTimeout(ttl: Long = 5 * 60) = try {
+        val rawTime = api.getRawTime()
+        rawTime + ttl
+    } catch(e: Throwable) {
+        System.currentTimeMillis() / 1000 + ttl
     }
 
 }
