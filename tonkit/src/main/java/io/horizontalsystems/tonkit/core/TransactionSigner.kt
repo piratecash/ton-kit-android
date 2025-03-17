@@ -86,6 +86,9 @@ class TransactionSigner(private val api: TonApi) {
     }
 
     private suspend fun TransactionSigner.getSafeValidUntil(validUntil: Long): Long {
+        if (validUntil == 0L) {
+            return safeTimeout()
+        }
         return min(safeTimeout(), validUntil)
     }
 

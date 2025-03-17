@@ -1,6 +1,7 @@
 package com.tonapps.wallet.data.core.entity
 
 import android.os.Parcelable
+import com.tonapps.blockchain.ton.extensions.isBounceable
 import com.tonapps.blockchain.ton.extensions.safeParseCell
 import com.tonapps.blockchain.ton.extensions.toTlb
 import kotlinx.parcelize.Parcelize
@@ -37,7 +38,7 @@ data class RawMessageEntity(
         builder.stateInit = stateInit
         builder.destination = address
         builder.body = payload
-        // builder.bounceable = address.isBounceable()
+        builder.bounceable = addressValue.isBounceable()
         builder.coins = coins
         builder.build()
     }
@@ -52,10 +53,10 @@ data class RawMessageEntity(
     private companion object {
 
         private fun parseAmount(value: Any): Long {
-            if (value is Long) {
-                return value
+            if (value is String) {
+                return value.toLong()
             }
-            return value.toString().toLong()
+            throw IllegalArgumentException("Invalid amount value")
         }
     }
 

@@ -75,7 +75,7 @@ data class SendRequestEntity(
             val validUnit = when (value) {
                 is Long -> value
                 is Int -> value.toLong()
-                is String -> value.toLongOrNull() ?: throw IllegalArgumentException("Invalid validUntil parameter. Expected: int64 (Like ${currentTimeSeconds()}), Received: $value")
+                is String -> throw IllegalArgumentException("Invalid validUntil parameter. Expected: int64 (Like ${currentTimeSeconds()}), Received string")
                 else -> throw IllegalArgumentException("Invalid validUntil parameter. Expected: int64 (Like ${currentTimeSeconds()}), Received: $value")
             }
             if (validUnit > 1000000000000) {
