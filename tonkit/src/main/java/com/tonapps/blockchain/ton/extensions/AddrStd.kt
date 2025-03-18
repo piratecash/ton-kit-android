@@ -16,6 +16,10 @@ fun AddrStd.toAccountId(): String {
     ).lowercase()
 }
 
+fun String.isBounceable(): Boolean {
+    return startsWith("0:") || startsWith("E")
+}
+
 fun String.toUserFriendly(
     wallet: Boolean = true,
     testnet: Boolean,
