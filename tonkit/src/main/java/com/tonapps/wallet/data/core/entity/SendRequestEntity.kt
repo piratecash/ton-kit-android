@@ -50,9 +50,9 @@ data class SendRequestEntity(
             }
         }
 
-        private fun parseNetwork(value: Any?): TonNetwork {
+        private fun parseNetwork(value: Any?): Int {
             if (value == null) {
-                return TonNetwork.MAINNET
+                return TonNetwork.MAINNET.value
             }
             if (value is String) {
                 return parseNetwork(value.toIntOrNull())
@@ -60,11 +60,7 @@ data class SendRequestEntity(
             if (value !is Int) {
                 return parseNetwork(value.toString())
             }
-            return if (value == TonNetwork.TESTNET.value) {
-                TonNetwork.TESTNET
-            } else {
-                TonNetwork.MAINNET
-            }
+            return value
         }
 
         private fun parseValidUnit(json: JSONObject): Long {
