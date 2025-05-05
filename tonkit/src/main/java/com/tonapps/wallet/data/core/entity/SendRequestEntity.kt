@@ -50,17 +50,23 @@ data class SendRequestEntity(
             }
         }
 
-        private fun parseNetwork(value: Any?): Int {
+        private fun parseNetwork(value: Any?): TonNetwork {
             if (value == null) {
-                return TonNetwork.MAINNET.value
+                return TonNetwork.MAINNET
             }
-            if (value is String) {
-                return parseNetwork(value.toIntOrNull())
+
+            try {
+                val networkCode = value.toString().toIntOrNull()
+                    ?: throw IllegalArgumentException("Invalid network value: $value")
+
+                return when (networkCode) {
+                    TonNetwork.MAINNET.value -> TonNetwork.MAINNET
+                    TonNetwork.TESTNET.value -> TonNetwork.TESTNET
+                    else -> throw IllegalArgumentException("Unknown network code: $networkCode")
+                }
+            } catch (e: NumberFormatException) {
+                throw IllegalArgumentException("Invalid network format: $value", e)
             }
-            if (value !is Int) {
-                return parseNetwork(value.toString())
-            }
-            return value
         }
 
         private fun parseValidUnit(json: JSONObject): Long {
