@@ -11,7 +11,7 @@ sealed interface TonWallet {
         override val address = Address.parse(this.addressStr)
     }
 
-    sealed class FullAccess(val privateKey: PrivateKeyEd25519) : TonWallet {
+    open class FullAccess(val privateKey: PrivateKeyEd25519) : TonWallet {
         override val address: Address by lazy {
             val walletV4R2Contract = WalletV4R2Contract(publicKey = privateKey.publicKey())
             Address(walletV4R2Contract.address)
