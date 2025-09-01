@@ -149,9 +149,16 @@ class TransactionSender(
         val message = transfer.toSignedMessage(privateKey)
 
         api.send(message.base64())
-        val hash = message.hash().joinToString("") { "%02x".format(it) }
-        println("Transaction sent 1, hash: $hash")
-        println("Transaction sent 2, hash: ${message.hex()}")
+
+        val transactionHash = if (message.refs.isNotEmpty()) {
+            message.refs.firstOrNull()?.hash()?.joinToString("") { "%02x".format(it) }
+        } else {
+            message.hash().joinToString("") { "%02x".format(it) }
+        }
+
+        println("Transaction hash 1: $transactionHash")
+        val txHash = message.hash(0).joinToString("") { "%02x".format(it) }
+        println("Transaction hash 2: $txHash")
     }
 
     suspend fun send(boc: String) {
