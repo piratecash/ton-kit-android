@@ -3,7 +3,9 @@ package io.horizontalsystems.tonkit.core
 import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.EmptyPrivateKeyEd25519
 import com.tonapps.blockchain.ton.extensions.base64
+import com.tonapps.blockchain.ton.extensions.hex
 import com.tonapps.icu.Coins
+import com.tonapps.security.hex
 import com.tonapps.tonkeeper.core.entities.TransferEntity
 import com.tonapps.wallet.api.entity.BalanceEntity
 import com.tonapps.wallet.data.account.Wallet
@@ -147,6 +149,9 @@ class TransactionSender(
         val message = transfer.toSignedMessage(privateKey)
 
         api.send(message.base64())
+        val hash = message.hash().joinToString("") { "%02x".format(it) }
+        println("Transaction sent 1, hash: $hash")
+        println("Transaction sent 2, hash: ${message.hex()}")
     }
 
     suspend fun send(boc: String) {
