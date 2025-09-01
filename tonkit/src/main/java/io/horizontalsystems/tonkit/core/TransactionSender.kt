@@ -152,10 +152,14 @@ class TransactionSender(
         val message = transfer.toSignedMessage(privateKey)
 
         api.send(message.base64())
-        val boc = BagOfCells(message).toByteArray()
-        val txHash = sha256(boc).joinToString("") { "%02x".format(it) }
 
-        println("Transaction hash: $txHash")
+        val txId = message.hash().joinToString("") { "%02x".format(it) }
+        println("Transaction hash: $txId")
+
+//        val boc = BagOfCells(message).toByteArray()
+//        val txHash = sha256(boc).joinToString("") { "%02x".format(it) }
+
+//        println("Transaction hash: $txHash")
 
 //        val transactionHash = if (message.refs.isNotEmpty()) {
 //            message.refs.firstOrNull()?.hash()?.joinToString("") { "%02x".format(it) }
