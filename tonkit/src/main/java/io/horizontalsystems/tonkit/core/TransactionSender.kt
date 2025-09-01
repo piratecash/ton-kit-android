@@ -4,6 +4,7 @@ import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.EmptyPrivateKeyEd25519
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.blockchain.ton.extensions.hex
+import com.tonapps.blockchain.ton.extensions.toByteArray
 import com.tonapps.icu.Coins
 import com.tonapps.security.hex
 import com.tonapps.tonkeeper.core.entities.TransferEntity
@@ -15,6 +16,7 @@ import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.TonApi
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
 import org.ton.api.pk.PrivateKeyEd25519
+import org.ton.crypto.digest.sha256
 import java.math.BigInteger
 
 class TransactionSender(
@@ -156,9 +158,17 @@ class TransactionSender(
             message.hash().joinToString("") { "%02x".format(it) }
         }
 
-        println("Transaction hash 1: $transactionHash")
-        val txHash = message.hash(0).joinToString("") { "%02x".format(it) }
-        println("Transaction hash 2: $txHash")
+//        println("Transaction hash 1: $transactionHash")
+//        val txHash = message.hash(0).joinToString("") { "%02x".format(it) }
+//        println("Transaction hash 2: $txHash")
+
+        println("Transaction hash: Message structure:")
+        println("Transaction hash: - Bits: ${message.bits}")
+        println("Transaction hash: - Refs count: ${message.refs.size}")
+        println("Transaction hash: - Message BOC: ${message.base64()}")
+        val boc = message.toByteArray() // сериализованный BOC сообщения
+        val txHash = sha256(boc).joinToString("") { "%02x".format(it) }
+        println("Transaction hash: $txHash")
     }
 
     suspend fun send(boc: String) {
