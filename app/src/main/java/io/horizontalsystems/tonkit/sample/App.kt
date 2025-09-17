@@ -29,10 +29,11 @@ class App : Application() {
     }
 
     companion object {
-        val tonWallet: TonWallet = TonWallet.WatchOnly("EQDfvVvoSX_cDJ_L38Z2hkhA3fitZCPW1WV9mw6CcNbIrH-Q")
+        //        val tonWallet: TonWallet = TonWallet.WatchOnly("EQDfvVvoSX_cDJ_L38Z2hkhA3fitZCPW1WV9mw6CcNbIrH-Q")
+        val words = BuildConfig.WORDS.split(" ")
 //        val words =
 //            "used ugly meat glad balance divorce inner artwork hire invest already piano".split(" ")
-//        val tonWallet = TonWallet.Mnemonic(words, "")
+        val tonWallet = TonWallet.Mnemonic(words, "")
 
         lateinit var tonKit: TonKit
         lateinit var tonConnectKit: TonConnectKit

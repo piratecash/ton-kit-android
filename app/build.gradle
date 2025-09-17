@@ -5,6 +5,9 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+def localProperties = new Properties()
+localProperties.load(new FileInputStream(rootProject.file("local.properties")))
+
 android {
     namespace 'io.horizontalsystems.tonkit.sample'
     compileSdk 34
@@ -15,6 +18,7 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
+        buildConfigField "String", "WORDS", "${localProperties['words']}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -62,6 +66,11 @@ dependencies {
     implementation libs.bumptech.glide.compose
     implementation libs.androidx.navigation.compose
     implementation libs.kotlinx.serialization.json
+    implementation libs.mlkit.barcode.scanning
+    implementation libs.androidx.camera.core
+    implementation libs.androidx.camera.camera2
+    implementation libs.androidx.camera.lifecycle
+    implementation libs.androidx.camera.view
 
 
 

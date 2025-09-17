@@ -48,6 +48,16 @@ fun TonConnectNewConnectionScreen(navController: NavHostController) {
             Text("Resolve URL from clipboard")
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = {
+                navController.navigate(QRCodeScanner)
+            }
+        ) {
+            Text("Scan by camera")
+        }
+
         uiState.dAppRequestEntity?.let { dAppRequestEntity ->
             Spacer(modifier = Modifier.height(12.dp))
 

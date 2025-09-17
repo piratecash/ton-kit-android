@@ -28,6 +28,9 @@ object TonConnectNewConnection
 @Serializable
 object TonConnectSendTransaction
 
+@Serializable
+object QRCodeScanner
+
 @Composable
 fun NavigationStack() {
     val navController = rememberNavController()
@@ -59,6 +62,19 @@ fun NavigationStack() {
         }
         composable<TonConnectNewConnection> {
             TonConnectNewConnectionScreen(navController)
+        }
+        composable<QRCodeScanner> { backStackEntry ->
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(TonConnectNewConnection)
+            }
+            val viewModel = viewModel<TonConnectNewConnectionViewModel>(parentEntry)
+            
+            QRCodeScannerScreen(
+                navController = navController,
+                onQRCodeScanned = { url ->
+                    viewModel.resolveUrl(url)
+                }
+            )
         }
     }
 }
