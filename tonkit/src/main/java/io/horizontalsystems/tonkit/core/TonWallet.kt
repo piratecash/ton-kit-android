@@ -5,6 +5,7 @@ import com.tonapps.blockchain.ton.contract.PrivateKeyHashSigner
 import com.tonapps.blockchain.ton.contract.WalletV4R2Contract
 import io.horizontalsystems.tonkit.Address
 import org.ton.kotlin.crypto.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import org.ton.kotlin.crypto.mnemonic.Mnemonic
 
 sealed interface TonWallet {
@@ -15,12 +16,17 @@ sealed interface TonWallet {
     }
 
     open class FullAccess(
-        val privateKey: PrivateKeyEd25519,
-        val hashSigner: HashSigner = PrivateKeyHashSigner(privateKey)
+        val publicKeyEd25519: PublicKeyEd25519,
+        val hashSigner: HashSigner
     ) : TonWallet {
+        constructor(privateKeyEd25519: PrivateKeyEd25519) : this(
+            publicKeyEd25519 = privateKeyEd25519.publicKey(),
+            hashSigner = PrivateKeyHashSigner(privateKeyEd25519)
+        )
+
         override val address: Address by lazy {
             val walletV4R2Contract =
-                WalletV4R2Contract(publicKey = privateKey.publicKey(), hashSigner = hashSigner)
+                WalletV4R2Contract(publicKey = publicKeyEd25519, hashSigner = hashSigner)
             Address(walletV4R2Contract.address)
         }
     }
