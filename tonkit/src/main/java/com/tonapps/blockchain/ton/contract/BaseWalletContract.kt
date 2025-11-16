@@ -21,6 +21,7 @@ import org.ton.cell.buildCell
 import org.ton.contract.wallet.WalletTransfer
 import org.ton.kotlin.crypto.PrivateKeyEd25519
 import org.ton.kotlin.crypto.PublicKeyEd25519
+import org.ton.kotlin.crypto.Signer
 import org.ton.tlb.CellRef
 import org.ton.tlb.constructor.AnyTlbConstructor
 import org.ton.tlb.storeTlb
@@ -38,7 +39,8 @@ enum class SignaturePosition {
 
 abstract class BaseWalletContract(
     val workchain: Int = DEFAULT_WORKCHAIN,
-    val publicKey: PublicKeyEd25519
+    val publicKey: PublicKeyEd25519,
+    private val signer: Signer?
 ) {
 
     companion object {
@@ -53,8 +55,8 @@ abstract class BaseWalletContract(
             return when (v.lowercase()) {
                 "v3r1" -> WalletV3R1Contract(publicKey = publicKey)
                 "v3r2" -> WalletV3R2Contract(publicKey = publicKey)
-                "v4r1" -> WalletV4R1Contract(publicKey = publicKey)
-                "v4r2" -> WalletV4R2Contract(publicKey = publicKey)
+                "v4r1" -> WalletV4R1Contract(publicKey = publicKey, signer = null)
+                "v4r2" -> WalletV4R2Contract(publicKey = publicKey, signer = null)
                 "v5beta" -> WalletV5BetaContract(
                     publicKey = publicKey,
                     networkGlobalId = networkGlobalId
@@ -109,7 +111,11 @@ abstract class BaseWalletContract(
         privateKey: PrivateKeyEd25519,
         unsignedBody: Cell,
     ): Cell {
-        val signature = BitString(privateKey.sign(unsignedBody.hash()))
+        val signature = BitString(
+            signer?.let {
+                it.signToByteArray(unsignedBody.hash().toByteArray())
+            } ?: privateKey.sign(unsignedBody.hash())
+        )
         return signedBody(signature, unsignedBody)
     }
 

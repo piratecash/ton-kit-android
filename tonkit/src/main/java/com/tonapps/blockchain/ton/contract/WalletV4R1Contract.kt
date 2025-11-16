@@ -7,7 +7,9 @@ import org.ton.cell.Cell
 import org.ton.cell.CellBuilder
 import org.ton.cell.storeRef
 import org.ton.contract.wallet.WalletTransfer
+import org.ton.kotlin.crypto.PrivateKeyEd25519
 import org.ton.kotlin.crypto.PublicKeyEd25519
+import org.ton.kotlin.crypto.Signer
 import org.ton.tlb.constructor.AnyTlbConstructor
 import org.ton.tlb.storeTlb
 import java.math.BigInteger
@@ -15,7 +17,8 @@ import java.math.BigInteger
 open class WalletV4R1Contract(
     workchain: Int = DEFAULT_WORKCHAIN,
     publicKey: PublicKeyEd25519,
-) : BaseWalletContract(workchain, publicKey) {
+    signer: Signer?
+) : BaseWalletContract(workchain, publicKey, signer) {
 
     override fun getWalletVersion() = WalletVersion.V4R1
 
