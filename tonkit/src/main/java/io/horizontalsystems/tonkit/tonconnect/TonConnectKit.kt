@@ -88,6 +88,7 @@ class TonConnectKit(
             publicKey = privateKey.publicKey(),
             type = Wallet.Type.Default,
             version = WalletVersion.V4R2,
+            hashSigner = tonWallet.hashSigner,
             label = Wallet.Label("", "", 0)
         )
         return connect(walletEntity, privateKey, manifest, dAppRequestEntity.id, dAppRequestEntity.payload.items)

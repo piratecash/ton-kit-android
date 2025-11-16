@@ -1,16 +1,15 @@
 package com.tonapps.blockchain.ton.contract
 
 import com.tonapps.blockchain.ton.extensions.base64
-import org.ton.kotlin.crypto.PublicKeyEd25519
 import org.ton.boc.BagOfCells
 import org.ton.cell.Cell
-import org.ton.kotlin.crypto.Signer
+import org.ton.kotlin.crypto.PublicKeyEd25519
 
 class WalletV4R2Contract(
     workchain: Int = DEFAULT_WORKCHAIN,
     publicKey: PublicKeyEd25519,
-    signer: Signer?
-) : WalletV4R1Contract(workchain, publicKey, signer) {
+    override val hashSigner: HashSigner
+) : WalletV4R1Contract(workchain, publicKey, hashSigner) {
 
     override fun getWalletVersion() = WalletVersion.V4R2
 

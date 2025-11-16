@@ -8,7 +8,8 @@ import com.tonapps.blockchain.ton.extensions.base64
 class WalletV3R2Contract(
     workchain: Int = DEFAULT_WORKCHAIN,
     publicKey: PublicKeyEd25519,
-) : WalletV3R1Contract(workchain, publicKey) {
+    override val hashSigner: HashSigner
+) : WalletV3R1Contract(workchain, publicKey, hashSigner) {
 
     override fun getWalletVersion() = WalletVersion.V3R2
 

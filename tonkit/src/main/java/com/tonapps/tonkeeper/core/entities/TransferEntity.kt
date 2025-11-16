@@ -183,10 +183,10 @@ data class TransferEntity(
         )
     }
 
-    fun toSignedMessage(privateKeyEd25519: PrivateKeyEd25519): Cell {
-        return contract.createTransferMessageCell(
+    fun toSignedMessage(useEmptySigner: Boolean): Cell {
+        return contract.createTransferMessageCellFromUnsignedBody(
             address = contract.address,
-            privateKey = privateKeyEd25519,
+            useEmptySigner = useEmptySigner,
             seqno = seqno,
             unsignedBody = unsignedBody,
         )

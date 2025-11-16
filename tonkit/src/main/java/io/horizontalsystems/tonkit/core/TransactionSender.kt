@@ -1,7 +1,7 @@
 package io.horizontalsystems.tonkit.core
 
+import com.tonapps.blockchain.ton.contract.PrivateKeyHashSigner
 import com.tonapps.blockchain.ton.contract.WalletVersion
-import com.tonapps.blockchain.ton.extensions.EmptyPrivateKeyEd25519
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.icu.Coins
 import com.tonapps.tonkeeper.core.entities.TransferEntity
@@ -23,11 +23,15 @@ class TransactionSender(
     private suspend fun safeTimeout(ttl: Long = 5 * 60) = try {
         val rawTime = api.getRawTime()
         rawTime + ttl
-    } catch(e: Throwable) {
+    } catch (e: Throwable) {
         System.currentTimeMillis() / 1000 + ttl
     }
 
-    suspend fun estimateFee(recipient: FriendlyAddress, amount: TonKit.SendAmount, comment: String?): BigInteger {
+    suspend fun estimateFee(
+        recipient: FriendlyAddress,
+        amount: TonKit.SendAmount,
+        comment: String?
+    ): BigInteger {
         val value: BigInteger
         val isMax: Boolean
 
@@ -36,6 +40,7 @@ class TransactionSender(
                 value = amount.value
                 isMax = false
             }
+
             TonKit.SendAmount.Max -> {
                 value = BigInteger.ZERO
                 isMax = true
@@ -50,7 +55,7 @@ class TransactionSender(
             sender.toRaw(),
             true
         )
-        val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
+        val message = transfer.toSignedMessage(true)
         val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), 1_000_000_000))
 
         return api.estimateFee(message.base64(), params)
@@ -73,6 +78,7 @@ class TransactionSender(
             type = Wallet.Type.Default,
             version = WalletVersion.V4R2,
             label = Wallet.Label("", "", 0),
+            hashSigner = PrivateKeyHashSigner(privateKey),
             ledger = null
         )
 
@@ -91,7 +97,12 @@ class TransactionSender(
         return transfer
     }
 
-    suspend fun estimateFee(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?): BigInteger {
+    suspend fun estimateFee(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?
+    ): BigInteger {
         val transfer = getTonTransferEntity(
             amount,
             false,
@@ -100,7 +111,7 @@ class TransactionSender(
             jettonWallet.toRaw(),
             false
         )
-        val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
+        val message = transfer.toSignedMessage(true)
         val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), 1_000_000_000))
 
         return api.estimateFee(message.base64(), params)
@@ -116,6 +127,7 @@ class TransactionSender(
                 value = amount.value
                 isMax = false
             }
+
             TonKit.SendAmount.Max -> {
                 value = BigInteger.ZERO
                 isMax = true
@@ -130,12 +142,17 @@ class TransactionSender(
             sender.toRaw(),
             true
         )
-        val message = transfer.toSignedMessage(privateKey)
+        val message = transfer.toSignedMessage(false)
 
         api.send(message.base64())
     }
 
-    suspend fun send(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?) {
+    suspend fun send(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?
+    ) {
         val transfer = getTonTransferEntity(
             amount,
             false,
@@ -144,7 +161,7 @@ class TransactionSender(
             jettonWallet.toRaw(),
             false
         )
-        val message = transfer.toSignedMessage(privateKey)
+        val message = transfer.toSignedMessage(false)
 
         api.send(message.base64())
     }

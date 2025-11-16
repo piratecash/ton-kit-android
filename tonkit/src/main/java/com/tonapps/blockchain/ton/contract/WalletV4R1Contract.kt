@@ -17,8 +17,8 @@ import java.math.BigInteger
 open class WalletV4R1Contract(
     workchain: Int = DEFAULT_WORKCHAIN,
     publicKey: PublicKeyEd25519,
-    signer: Signer?
-) : BaseWalletContract(workchain, publicKey, signer) {
+    override val hashSigner: HashSigner
+) : BaseWalletContract(workchain, publicKey) {
 
     override fun getWalletVersion() = WalletVersion.V4R1
 

@@ -1,6 +1,7 @@
 package com.tonapps.blockchain.ton.contract.w5
 
 import com.tonapps.blockchain.ton.contract.BaseWalletContract
+import com.tonapps.blockchain.ton.contract.HashSigner
 import com.tonapps.blockchain.ton.contract.MessageType
 import com.tonapps.blockchain.ton.contract.SignaturePosition
 import com.tonapps.blockchain.ton.contract.WalletVersion
@@ -21,8 +22,9 @@ class WalletV5BetaContract(
     workchain: Int = DEFAULT_WORKCHAIN,
     publicKey: PublicKeyEd25519,
     private val networkGlobalId: Int = -239,
-    private val subwalletNumber: Int = 0
-) : BaseWalletContract(workchain = workchain, publicKey = publicKey, signer = null) {
+    private val subwalletNumber: Int = 0,
+    override val hashSigner: HashSigner
+) : BaseWalletContract(workchain = workchain, publicKey = publicKey) {
 
     override fun getWalletVersion() = WalletVersion.V5R1BETA
 

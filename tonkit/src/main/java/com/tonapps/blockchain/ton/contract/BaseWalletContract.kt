@@ -3,7 +3,7 @@ package com.tonapps.blockchain.ton.contract
 import com.tonapps.blockchain.ton.contract.w5.W5Context
 import com.tonapps.blockchain.ton.contract.w5.WalletV5BetaContract
 import com.tonapps.blockchain.ton.contract.w5.WalletV5R1Contract
-import com.tonapps.blockchain.ton.extensions.sign
+import com.tonapps.blockchain.ton.extensions.EmptyPrivateKeyEd25519
 import org.ton.bitstring.BitString
 import org.ton.block.AddrNone
 import org.ton.block.AddrStd
@@ -19,9 +19,7 @@ import org.ton.cell.Cell
 import org.ton.cell.CellBuilder
 import org.ton.cell.buildCell
 import org.ton.contract.wallet.WalletTransfer
-import org.ton.kotlin.crypto.PrivateKeyEd25519
 import org.ton.kotlin.crypto.PublicKeyEd25519
-import org.ton.kotlin.crypto.Signer
 import org.ton.tlb.CellRef
 import org.ton.tlb.constructor.AnyTlbConstructor
 import org.ton.tlb.storeTlb
@@ -40,8 +38,9 @@ enum class SignaturePosition {
 abstract class BaseWalletContract(
     val workchain: Int = DEFAULT_WORKCHAIN,
     val publicKey: PublicKeyEd25519,
-    private val signer: Signer?
 ) {
+    abstract val hashSigner: HashSigner
+    private val emptySigner = PrivateKeyHashSigner(EmptyPrivateKeyEd25519)
 
     companion object {
         const val DEFAULT_WORKCHAIN = 0
@@ -50,30 +49,38 @@ abstract class BaseWalletContract(
         fun create(
             publicKey: PublicKeyEd25519,
             v: String,
-            networkGlobalId: Int
+            networkGlobalId: Int,
+            hashSigner: HashSigner
         ): BaseWalletContract {
             return when (v.lowercase()) {
-                "v3r1" -> WalletV3R1Contract(publicKey = publicKey)
-                "v3r2" -> WalletV3R2Contract(publicKey = publicKey)
-                "v4r1" -> WalletV4R1Contract(publicKey = publicKey, signer = null)
-                "v4r2" -> WalletV4R2Contract(publicKey = publicKey, signer = null)
+                "v3r1" -> WalletV3R1Contract(publicKey = publicKey, hashSigner = hashSigner)
+                "v3r2" -> WalletV3R2Contract(publicKey = publicKey, hashSigner = hashSigner)
+                "v4r1" -> WalletV4R1Contract(publicKey = publicKey, hashSigner = hashSigner)
+                "v4r2" -> WalletV4R2Contract(publicKey = publicKey, hashSigner = hashSigner)
                 "v5beta" -> WalletV5BetaContract(
                     publicKey = publicKey,
-                    networkGlobalId = networkGlobalId
+                    networkGlobalId = networkGlobalId,
+                    hashSigner = hashSigner
                 )
 
                 "v5r1" -> WalletV5R1Contract(
                     publicKey = publicKey, context = W5Context.Client(
                         networkGlobalId = networkGlobalId,
-                    )
+                    ),
+                    hashSigner = hashSigner
                 )
 
                 else -> throw IllegalArgumentException("Unsupported contract version: $v")
             }
         }
 
-        fun create(publicKey: PublicKeyEd25519, v: String, testnet: Boolean): BaseWalletContract {
-            return create(publicKey, v, if (testnet) -3 else -239)
+        fun create(
+            publicKey: PublicKeyEd25519,
+            v: String,
+            testnet: Boolean,
+            hashSigner: HashSigner
+        ): BaseWalletContract {
+            return create(publicKey, v, if (testnet) -3 else -239, hashSigner)
         }
 
         fun createIntMsg(gift: WalletTransfer): MessageRelaxed<Cell> = gift.toMessageRelaxed()
@@ -107,15 +114,12 @@ abstract class BaseWalletContract(
 
     abstract fun getSignaturePosition(): SignaturePosition
 
-    private fun signBody(
-        privateKey: PrivateKeyEd25519,
-        unsignedBody: Cell,
-    ): Cell {
-        val signature = BitString(
-            signer?.let {
-                it.signToByteArray(unsignedBody.hash().toByteArray())
-            } ?: privateKey.sign(unsignedBody.hash())
-        )
+    private fun signBody(unsignedBody: Cell, useEmptySigner: Boolean): Cell {
+        val signature = if (useEmptySigner) {
+            emptySigner.sign(unsignedBody.hash())
+        } else {
+            hashSigner.sign(unsignedBody.hash())
+        }
         return signedBody(signature, unsignedBody)
     }
 
@@ -138,13 +142,14 @@ abstract class BaseWalletContract(
         }
     }
 
-    fun createTransferMessageCell(
+    fun createTransferMessageCellFromUnsignedBody(
         address: MsgAddressInt,
-        privateKey: PrivateKeyEd25519,
         seqno: Int,
-        unsignedBody: Cell
+        unsignedBody: Cell,
+        useEmptySigner: Boolean,
     ): Cell {
-        val message = createTransferMessage(address, privateKey, seqno, unsignedBody)
+        val message =
+            createTransferMessageFromUnsignedBody(address, useEmptySigner, seqno, unsignedBody)
 
         val cell = buildCell {
             storeTlb(Message.tlbCodec(AnyTlbConstructor), message)
@@ -152,9 +157,9 @@ abstract class BaseWalletContract(
         return cell
     }
 
-    fun createTransferMessage(
+    fun createTransferMessageFromUnsignedBody(
         address: MsgAddressInt,
-        privateKey: PrivateKeyEd25519,
+        useEmptySigner: Boolean,
         seqno: Int,
         unsignedBody: Cell
     ): Message<Cell> {
@@ -177,7 +182,7 @@ abstract class BaseWalletContract(
             }
         )
 
-        val transferBody = signBody(privateKey, unsignedBody)
+        val transferBody = signBody(unsignedBody, useEmptySigner)
 
         val body = Either.of<Cell, CellRef<Cell>>(
             null,

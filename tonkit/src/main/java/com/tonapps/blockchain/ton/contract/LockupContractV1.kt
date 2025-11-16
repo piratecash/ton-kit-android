@@ -13,7 +13,8 @@ class LockupContractV1(
     publicKey: PublicKeyEd25519,
     private val configPubKey: BitString,
     private val allowedDestinations: Boolean,
-): BaseWalletContract(publicKey = publicKey, signer = null) {
+    override val hashSigner: HashSigner,
+): BaseWalletContract(publicKey = publicKey) {
 
     override fun getSignaturePosition(): SignaturePosition {
         return SignaturePosition.Front

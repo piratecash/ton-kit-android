@@ -2,6 +2,7 @@ package com.tonapps.blockchain.ton.contract.w5
 
 import com.tonapps.blockchain.ton.TonNetwork
 import com.tonapps.blockchain.ton.contract.BaseWalletContract
+import com.tonapps.blockchain.ton.contract.HashSigner
 import com.tonapps.blockchain.ton.contract.MessageType
 import com.tonapps.blockchain.ton.contract.SignaturePosition
 import com.tonapps.blockchain.ton.contract.WalletVersion
@@ -20,10 +21,11 @@ import java.math.BigInteger
 class WalletV5R1Contract(
     publicKey: PublicKeyEd25519,
     private val context: W5Context,
-) : BaseWalletContract(workchain = context.getWorkchain(), publicKey = publicKey, signer = null) {
+    override val hashSigner: HashSigner
+) : BaseWalletContract(workchain = context.getWorkchain(), publicKey = publicKey) {
 
-    constructor(publicKey: PublicKeyEd25519, network: TonNetwork) : this(
-        publicKey, W5Context.Client(networkGlobalId = network.value)
+    constructor(publicKey: PublicKeyEd25519, network: TonNetwork, hashSigner: HashSigner) : this(
+        publicKey, W5Context.Client(networkGlobalId = network.value), hashSigner
     )
 
     override fun getStateCell(): Cell {
