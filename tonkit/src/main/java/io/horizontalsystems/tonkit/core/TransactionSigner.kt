@@ -9,7 +9,7 @@ import com.tonapps.wallet.data.account.entities.WalletEntity
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.models.Event
-import org.ton.api.pk.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PrivateKeyEd25519
 import org.ton.cell.Cell
 import org.ton.contract.wallet.WalletTransfer
 import kotlin.math.min

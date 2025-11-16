@@ -29,11 +29,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import org.ton.api.pk.PrivateKeyEd25519
-import org.ton.api.pub.PublicKeyEd25519
+import org.ton.kotlin.crypto.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import org.ton.block.AddrStd
 import org.ton.block.StateInit
-import org.ton.crypto.base64
 
 class TonConnectKit(
     private val dAppManager: DAppManager,
@@ -274,4 +273,3 @@ class TonConnectKit(
 sealed class TonConnectError : Error()
 
 class UriError(override val message: String) : TonConnectError()
-

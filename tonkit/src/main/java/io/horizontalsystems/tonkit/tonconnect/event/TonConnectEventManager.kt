@@ -2,6 +2,7 @@ package io.horizontalsystems.tonkit.tonconnect.event
 
 import android.util.Base64
 import android.util.Log
+import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.network.SSEvent
 import com.tonapps.wallet.api.API
 import com.tonapps.wallet.data.tonconnect.entities.DAppEntity
@@ -17,7 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import org.ton.crypto.base64
+import com.tonapps.blockchain.ton.extensions.encodeBase64
 
 class TonConnectEventManager(
     private val dAppManager: DAppManager,

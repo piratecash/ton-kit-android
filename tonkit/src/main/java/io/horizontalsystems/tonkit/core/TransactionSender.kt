@@ -12,7 +12,7 @@ import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.TonApi
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
-import org.ton.api.pk.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PrivateKeyEd25519
 import java.math.BigInteger
 
 class TransactionSender(

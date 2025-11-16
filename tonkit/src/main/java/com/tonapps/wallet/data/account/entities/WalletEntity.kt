@@ -9,8 +9,8 @@ import com.tonapps.blockchain.ton.extensions.toRawAddress
 import com.tonapps.blockchain.ton.extensions.toWalletAddress
 import com.tonapps.wallet.data.account.Wallet
 import kotlinx.parcelize.Parcelize
-import org.ton.api.pk.PrivateKeyEd25519
-import org.ton.api.pub.PublicKeyEd25519
+import org.ton.kotlin.crypto.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import org.ton.cell.Cell
 import org.ton.contract.wallet.WalletTransfer
 

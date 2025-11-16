@@ -4,18 +4,18 @@ import com.tonapps.blockchain.ton.contract.BaseWalletContract
 import com.tonapps.blockchain.ton.contract.MessageType
 import com.tonapps.blockchain.ton.contract.SignaturePosition
 import com.tonapps.blockchain.ton.contract.WalletVersion
-import org.ton.api.pub.PublicKeyEd25519
-import org.ton.bigint.BigInt
+import com.tonapps.blockchain.ton.extensions.base64
 import org.ton.block.MessageRelaxed
 import org.ton.boc.BagOfCells
 import org.ton.cell.Cell
 import org.ton.cell.CellBuilder
 import org.ton.cell.CellSlice
+import org.ton.cell.storeRef
 import org.ton.contract.wallet.WalletTransfer
-import org.ton.crypto.base64
-import org.ton.tlb.CellRef
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import org.ton.tlb.constructor.AnyTlbConstructor
-import org.ton.tlb.storeRef
+import org.ton.tlb.storeTlb
+import java.math.BigInteger
 
 class WalletV5BetaContract(
     workchain: Int = DEFAULT_WORKCHAIN,
@@ -30,7 +30,7 @@ class WalletV5BetaContract(
         return CellBuilder.createCell {
             storeUInt(0, 33)
             storeSlice(storeWalletId())
-            storeBits(publicKey.key)
+            storeBytes(publicKey.key.toByteArray())
             storeBit(false)
         }
     }
@@ -62,8 +62,9 @@ class WalletV5BetaContract(
                 storeUInt(OpCodes.ActionSendMsg.code, 32)
                 storeUInt(message.sendMode, 8)
                 storeRef(latestCell)
-                val intMsg = CellRef(createIntMsg(message))
-                storeRef(MessageRelaxed.tlbCodec(AnyTlbConstructor), intMsg)
+                storeRef {
+                    storeTlb(MessageRelaxed.tlbCodec(AnyTlbConstructor), createIntMsg(message))
+                }
             }
         }
         return latestCell
@@ -81,7 +82,7 @@ class WalletV5BetaContract(
         validUntil: Long,
         seqno: Int,
         messageType: MessageType,
-        queryId: BigInt?,
+        queryId: BigInteger?,
         vararg gifts: WalletTransfer
     ): Cell {
         if (gifts.size > maxMessages) {

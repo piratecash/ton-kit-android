@@ -1,18 +1,16 @@
 package com.tonapps.blockchain.ton.extensions
 
-import io.ktor.util.encodeBase64
 import org.ton.bitstring.BitString
 import org.ton.boc.BagOfCells
 import org.ton.cell.Cell
 import org.ton.cell.CellSlice
-import org.ton.crypto.hex
 
 fun String.toBoc(): BagOfCells {
     return try {
         BagOfCells(hex(this))
 
     } catch (e: Throwable) {
-        BagOfCells(base64())
+        BagOfCells(this.base64())
     }
 }
 
@@ -36,8 +34,9 @@ fun Cell.base64(): String {
     return toByteArray().encodeBase64()
 }
 
+@OptIn(ExperimentalStdlibApi::class)
 fun Cell.hex(): String {
-    return hex(toByteArray())
+    return toByteArray().toHexString()
 }
 
 fun CellSlice.loadRemainingBits(): BitString {

@@ -3,7 +3,6 @@ package com.tonapps.blockchain.ton.extensions
 import org.ton.boc.BagOfCells
 import org.ton.cell.Cell
 import org.ton.cell.CellBuilder
-import org.ton.crypto.base64
 import org.ton.tlb.TlbCodec
 import org.ton.tlb.TlbObject
 import org.ton.tlb.loadTlb

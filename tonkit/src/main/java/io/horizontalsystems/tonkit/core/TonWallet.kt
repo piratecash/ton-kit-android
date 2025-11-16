@@ -2,7 +2,8 @@ package io.horizontalsystems.tonkit.core
 
 import com.tonapps.blockchain.ton.contract.WalletV4R2Contract
 import io.horizontalsystems.tonkit.Address
-import org.ton.api.pk.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PrivateKeyEd25519
+import org.ton.kotlin.crypto.mnemonic.Mnemonic
 
 sealed interface TonWallet {
     val address: Address
@@ -18,10 +19,14 @@ sealed interface TonWallet {
         }
     }
 
-    data class Seed(val seed: ByteArray) : FullAccess(PrivateKeyEd25519(seed))
+    data class Seed(val seed: ByteArray) : FullAccess(
+        PrivateKeyEd25519(if (seed.size == 64) seed.copyOfRange(0, 32) else seed)
+    )
     data class Mnemonic(val words: List<String>, val passphrase: String = "") : FullAccess(
         PrivateKeyEd25519(
-            org.ton.mnemonic.Mnemonic.toSeed(words, passphrase)
+            Mnemonic(words, passphrase.encodeToByteArray())
+                .toSeed()
+                .copyOfRange(0, 32)
         )
     )
 }
