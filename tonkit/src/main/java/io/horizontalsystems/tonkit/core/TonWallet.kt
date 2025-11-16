@@ -3,6 +3,7 @@ package io.horizontalsystems.tonkit.core
 import com.tonapps.blockchain.ton.contract.WalletV4R2Contract
 import io.horizontalsystems.tonkit.Address
 import org.ton.kotlin.crypto.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import org.ton.kotlin.crypto.Signer
 import org.ton.kotlin.crypto.mnemonic.Mnemonic
 
@@ -16,6 +17,13 @@ sealed interface TonWallet {
     open class FullAccess(val privateKey: PrivateKeyEd25519, signer: Signer? = null) : TonWallet {
         override val address: Address by lazy {
             val walletV4R2Contract = WalletV4R2Contract(publicKey = privateKey.publicKey(), signer = signer)
+            Address(walletV4R2Contract.address)
+        }
+    }
+
+    open class FullAccessWithSigner(val publicKey: PublicKeyEd25519, signer: Signer? = null) : TonWallet {
+        override val address: Address by lazy {
+            val walletV4R2Contract = WalletV4R2Contract(publicKey = publicKey, signer = signer)
             Address(walletV4R2Contract.address)
         }
     }
