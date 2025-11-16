@@ -20,7 +20,7 @@ import java.math.BigInteger
 class WalletV5R1Contract(
     publicKey: PublicKeyEd25519,
     private val context: W5Context,
-) : BaseWalletContract(context.getWorkchain(), publicKey) {
+) : BaseWalletContract(workchain = context.getWorkchain(), publicKey = publicKey, signer = null) {
 
     constructor(publicKey: PublicKeyEd25519, network: TonNetwork) : this(
         publicKey, W5Context.Client(networkGlobalId = network.value)

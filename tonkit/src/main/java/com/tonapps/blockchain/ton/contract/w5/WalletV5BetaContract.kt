@@ -22,7 +22,7 @@ class WalletV5BetaContract(
     publicKey: PublicKeyEd25519,
     private val networkGlobalId: Int = -239,
     private val subwalletNumber: Int = 0
-) : BaseWalletContract(workchain, publicKey) {
+) : BaseWalletContract(workchain = workchain, publicKey = publicKey, signer = null) {
 
     override fun getWalletVersion() = WalletVersion.V5R1BETA
 

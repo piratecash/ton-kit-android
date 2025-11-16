@@ -12,8 +12,8 @@ import java.math.BigInteger
 class LockupContractV1(
     publicKey: PublicKeyEd25519,
     private val configPubKey: BitString,
-    private val allowedDestinations: Boolean
-): BaseWalletContract(publicKey = publicKey) {
+    private val allowedDestinations: Boolean,
+): BaseWalletContract(publicKey = publicKey, signer = null) {
 
     override fun getSignaturePosition(): SignaturePosition {
         return SignaturePosition.Front

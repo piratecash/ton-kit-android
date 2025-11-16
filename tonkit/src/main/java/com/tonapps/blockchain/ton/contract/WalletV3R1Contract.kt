@@ -15,7 +15,7 @@ import java.math.BigInteger
 open class WalletV3R1Contract(
     workchain: Int = DEFAULT_WORKCHAIN,
     publicKey: PublicKeyEd25519,
-) : BaseWalletContract(workchain, publicKey) {
+) : BaseWalletContract(workchain = workchain, publicKey = publicKey, signer = null) {
 
     override fun getWalletVersion() = WalletVersion.V3R1
 
