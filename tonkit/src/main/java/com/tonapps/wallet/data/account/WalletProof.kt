@@ -1,5 +1,6 @@
 package com.tonapps.wallet.data.account
 
+import com.tonapps.blockchain.ton.contract.HashSigner
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.blockchain.ton.extensions.encodeBase64
 import com.tonapps.blockchain.ton.extensions.hex
@@ -7,6 +8,7 @@ import com.tonapps.blockchain.ton.extensions.sign
 import com.tonapps.extensions.toByteArray
 import com.tonapps.wallet.data.account.entities.ProofDomainEntity
 import com.tonapps.wallet.data.account.entities.ProofEntity
+import org.ton.bitstring.toBitString
 import org.ton.kotlin.crypto.PrivateKeyEd25519
 import org.ton.block.AddrStd
 import org.ton.kotlin.crypto.sha256
@@ -20,16 +22,16 @@ object WalletProof {
 
     fun signTonkeeper(
         address: AddrStd,
-        secretKey: PrivateKeyEd25519,
+        hashSigner: HashSigner,
         payload: String,
     ): ProofEntity {
         val domain = ProofDomainEntity("tonkeeper.com")
-        return sign(address, secretKey, payload, domain)
+        return sign(address, hashSigner, payload, domain)
     }
 
     fun sign(
         address: AddrStd,
-        secretKey: PrivateKeyEd25519,
+        hashSigner: HashSigner,
         payload: String,
         domain: ProofDomainEntity,
     ): ProofEntity {
@@ -38,7 +40,7 @@ object WalletProof {
         val signatureMessage = sha256(message)
 
         val body = sha256(prefixMessage + signatureMessage)
-        val signature = secretKey.sign(body)
+        val signature = hashSigner.sign(body.toBitString()).toByteArray()
 
         return ProofEntity(
             timestamp = timestamp,

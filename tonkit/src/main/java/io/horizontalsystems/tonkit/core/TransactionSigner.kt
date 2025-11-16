@@ -17,7 +17,7 @@ import kotlin.math.min
 class TransactionSigner(private val api: TonApi) {
 
     suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet.FullAccess): Event {
-        val publicKey = tonWallet.privateKey.publicKey()
+        val publicKey = tonWallet.publicKeyEd25519
         val walletEntity = WalletEntity(
             id = "id",
             publicKey = publicKey,
@@ -31,10 +31,9 @@ class TransactionSigner(private val api: TonApi) {
     }
 
     suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet.FullAccess): String {
-        val privateKey = tonWallet.privateKey
         val walletEntity = WalletEntity(
             id = "id",
-            publicKey = privateKey.publicKey(),
+            publicKey = tonWallet.publicKeyEd25519,
             type = Wallet.Type.Default,
             version = WalletVersion.V4R2,
             hashSigner = tonWallet.hashSigner,

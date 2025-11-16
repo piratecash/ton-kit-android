@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.tonapps.blockchain.ton.TonNetwork
+import com.tonapps.blockchain.ton.contract.HashSigner
 import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.network.get
@@ -81,22 +82,20 @@ class TonConnectKit(
         walletId: String,
         tonWallet: TonWallet.FullAccess
     ): DAppEventSuccessEntity {
-        val privateKey = tonWallet.privateKey
-
         val walletEntity = WalletEntity(
             id = walletId,
-            publicKey = privateKey.publicKey(),
+            publicKey = tonWallet.publicKeyEd25519,
             type = Wallet.Type.Default,
             version = WalletVersion.V4R2,
             hashSigner = tonWallet.hashSigner,
             label = Wallet.Label("", "", 0)
         )
-        return connect(walletEntity, privateKey, manifest, dAppRequestEntity.id, dAppRequestEntity.payload.items)
+        return connect(walletEntity, tonWallet.hashSigner, manifest, dAppRequestEntity.id, dAppRequestEntity.payload.items)
     }
 
     private suspend fun connect(
         wallet: WalletEntity,
-        privateKey: PrivateKeyEd25519,
+        hashSigner: HashSigner,
         manifest: DAppManifestEntity,
         clientId: String,
         requestItems: List<DAppItemEntity>,
@@ -107,7 +106,7 @@ class TonConnectKit(
 
         dAppManager.addApp(app)
 
-        val items = createItems(app, wallet, privateKey, requestItems)
+        val items = createItems(app, wallet, hashSigner, requestItems)
         val res = DAppEventSuccessEntity(items, appName, appVersion, wallet.maxMessages)
         send(app, res.toJSON())
 //        firebaseToken?.let {
@@ -133,7 +132,7 @@ class TonConnectKit(
     private fun createItems(
         app: DAppEntity,
         wallet: WalletEntity,
-        privateKey: PrivateKeyEd25519,
+        hashSigner: HashSigner,
         items: List<DAppItemEntity>
     ): List<DAppReply> {
         val result = mutableListOf<DAppReply>()
@@ -150,7 +149,7 @@ class TonConnectKit(
                     payload = requestItem.payload ?: "",
                     domain = app.domain,
                     address = wallet.contract.address,
-                    privateWalletKey = privateKey,
+                    hashSigner = hashSigner,
                 ))
             }
         }
@@ -161,11 +160,11 @@ class TonConnectKit(
         payload: String,
         domain: ProofDomainEntity,
         address: AddrStd,
-        privateWalletKey: PrivateKeyEd25519,
+        hashSigner: HashSigner
     ): DAppProofItemReplySuccess {
         val proof = WalletProof.sign(
             address,
-            privateWalletKey,
+            hashSigner,
             payload,
             domain,
         )

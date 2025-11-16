@@ -1,6 +1,6 @@
 package io.horizontalsystems.tonkit.core
 
-import com.tonapps.blockchain.ton.contract.PrivateKeyHashSigner
+import com.tonapps.blockchain.ton.contract.HashSigner
 import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.icu.Coins
@@ -12,13 +12,14 @@ import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.TonApi
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
-import org.ton.kotlin.crypto.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import java.math.BigInteger
 
 class TransactionSender(
     private val api: TonApi,
     private val sender: Address,
-    private val privateKey: PrivateKeyEd25519,
+    private val hashSigner: HashSigner,
+    private val publicKeyEd25519: PublicKeyEd25519
 ) {
     private suspend fun safeTimeout(ttl: Long = 5 * 60) = try {
         val rawTime = api.getRawTime()
@@ -74,11 +75,11 @@ class TransactionSender(
 
         val walletEntity = WalletEntity(
             id = "id",
-            publicKey = privateKey.publicKey(),
+            publicKey = publicKeyEd25519,
             type = Wallet.Type.Default,
             version = WalletVersion.V4R2,
             label = Wallet.Label("", "", 0),
-            hashSigner = PrivateKeyHashSigner(privateKey),
+            hashSigner = hashSigner,
             ledger = null
         )
 

@@ -220,7 +220,7 @@ class TonKit(
 
             val transactionSender = when (tonWallet) {
                 is TonWallet.FullAccess -> {
-                    TransactionSender(api, address, tonWallet.privateKey)
+                    TransactionSender(api, address, tonWallet.hashSigner, tonWallet.publicKeyEd25519)
                 }
 
                 is TonWallet.WatchOnly -> null
