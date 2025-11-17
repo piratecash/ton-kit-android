@@ -10,7 +10,7 @@ fun String.toBoc(): BagOfCells {
         BagOfCells(hex(this))
 
     } catch (e: Throwable) {
-        BagOfCells(this.base64())
+        BagOfCells(base64())
     }
 }
 
