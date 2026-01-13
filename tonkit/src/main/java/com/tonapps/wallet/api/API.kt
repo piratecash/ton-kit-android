@@ -206,9 +206,11 @@ class API {
 
     fun tonconnectEvents(
         publicKeys: List<String>,
-        lastEventId: String?
+        lastEventId: String?,
+        onConnected: (() -> Unit)? = null
     ): Flow<SSEvent> {
         if (publicKeys.isEmpty()) {
+            onConnected?.invoke()
             return emptyFlow()
         }
         val value = publicKeys.joinToString(",")
@@ -216,7 +218,7 @@ class API {
         if (lastEventId != null) {
             url += "&last_event_id=$lastEventId"
         }
-        return tonAPIHttpClient.sse(url)
+        return tonAPIHttpClient.sse(url, onConnected)
     }
 
 //    fun tonconnectPayload(): String? {

@@ -14,11 +14,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
-import com.tonapps.blockchain.ton.extensions.encodeBase64
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 class TonConnectEventManager(
     private val dAppManager: DAppManager,
@@ -29,8 +32,10 @@ class TonConnectEventManager(
     private var handleDAppsJob: Job? = null
     private var collectEventsJob: Job? = null
 
-    private val handlers = mutableMapOf<String, ITonConnectEventHandler>()
-    private val receivedEventIds = mutableSetOf<String>()
+    private val handlers = ConcurrentHashMap<String, ITonConnectEventHandler>()
+    private val receivedEventIds: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+
+    private val _sseConnectedFlow = MutableStateFlow(false)
 
     fun registerHandler(handler: ITonConnectEventHandler) {
         handlers[handler.method] = handler
@@ -51,11 +56,20 @@ class TonConnectEventManager(
 
     private fun handleDApps(dApps: List<DAppEntity>) {
         collectEventsJob?.cancel()
+        _sseConnectedFlow.value = false
+        // Clear received event IDs on SSE restart to prevent unbounded memory growth
+        // The lastEventId from localStorage ensures we don't reprocess old events
+        receivedEventIds.clear()
         collectEventsJob = coroutineScope.launch {
             val publicKeys = dApps.map { it.publicKeyHex }
 
-            api.tonconnectEvents(publicKeys, localStorage.getLastSSEventId())
+            api.tonconnectEvents(
+                publicKeys = publicKeys,
+                lastEventId = localStorage.getLastSSEventId(),
+                onConnected = { _sseConnectedFlow.value = true }
+            )
                 .retry {
+                    _sseConnectedFlow.value = false
                     delay(3000)
                     true
                 }
@@ -63,6 +77,18 @@ class TonConnectEventManager(
                     processEvent(dApps, it)
                 }
         }
+    }
+
+    /**
+     * Waits for SSE connection to be established.
+     * Returns true if connected within timeout, false otherwise.
+     */
+    suspend fun awaitSseReady(timeoutMs: Long = 5000): Boolean {
+        // Fast path: already connected
+        if (_sseConnectedFlow.value) return true
+        return withTimeoutOrNull(timeoutMs) {
+            _sseConnectedFlow.first { it }
+        } != null
     }
 
     private fun processEvent(dApps: List<DAppEntity>, ssEvent: SSEvent) {
@@ -89,7 +115,7 @@ class TonConnectEventManager(
             if (handler != null) {
                 handler.handle(requestId, params, dApp)
             } else {
-                Log.w("AAA", "No handler registered for method $method")
+                Log.w("TonConnectEventManager", "No handler registered for method $method")
                 responseToDApp(dApp, DAppErrorEntity.methodNotSupported(requestId))
             }
 

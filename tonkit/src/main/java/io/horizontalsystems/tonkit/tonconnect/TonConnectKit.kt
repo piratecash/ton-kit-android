@@ -106,6 +106,13 @@ class TonConnectKit(
 
         dAppManager.addApp(app)
 
+        // Wait for SSE connection to be established before sending response
+        // This fixes race condition where response is sent before SSE listener is ready
+        val sseReady = tonConnectEventManager.awaitSseReady()
+        if (!sseReady) {
+            Log.w("TonConnectKit", "SSE connection timeout - proceeding with send anyway. Connection may fail.")
+        }
+
         val items = createItems(app, wallet, hashSigner, requestItems)
         val res = DAppEventSuccessEntity(items, appName, appVersion, wallet.maxMessages)
         send(app, res.toJSON())
@@ -124,7 +131,7 @@ class TonConnectKit(
         app: DAppEntity,
         body: String,
     ) = withContext(Dispatchers.IO) {
-        Log.i("AAA", "send body: $body")
+        Log.d("TonConnectKit", "Sending message to dApp: ${app.url}")
         val encrypted = app.encrypt(body)
         api.tonconnectSend(app.publicKeyHex, app.clientId, base64(encrypted))
     }
