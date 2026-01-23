@@ -3,6 +3,7 @@ package io.horizontalsystems.tonkit.tonconnect
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.tonapps.tonkeeper.api.withRetry
 import com.tonapps.blockchain.ton.TonNetwork
 import com.tonapps.blockchain.ton.contract.HashSigner
 import com.tonapps.blockchain.ton.contract.WalletVersion
@@ -219,15 +220,10 @@ class TonConnectKit(
 
 
 
-    fun getManifest(manifestUrl: String): DAppManifestEntity {
-        //            val local = localDataSource.getManifest(sourceUrl)
-        //            if (local == null) {
-        val remote = loadManifest(manifestUrl)
-        //                localDataSource.setManifest(sourceUrl, remote)
-        return remote
-        //            } else {
-        //                local
-        //            }
+    suspend fun getManifest(manifestUrl: String): DAppManifestEntity {
+        return withRetry(times = 3) {
+            loadManifest(manifestUrl)
+        } ?: throw ManifestLoadError("Failed to load manifest from $manifestUrl after retries")
     }
 
     private fun loadManifest(url: String): DAppManifestEntity {
@@ -280,3 +276,4 @@ class TonConnectKit(
 sealed class TonConnectError : Error()
 
 class UriError(override val message: String) : TonConnectError()
+class ManifestLoadError(override val message: String) : TonConnectError()
