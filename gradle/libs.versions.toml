@@ -57,6 +57,7 @@ moshi-adapters = { module = "com.squareup.moshi:moshi-adapters", version.ref = "
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshiKotlin" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-sse = { module = "com.squareup.okhttp3:okhttp-sse", version.ref = "okhttp" }
+okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
 ton-kotlin-contract = { module = "org.ton.kotlin:ton-kotlin-contract", version.ref = "tonKotlin" }
 ton-kotlin-crypto = { module = "org.ton.kotlin:ton-kotlin-crypto", version.ref = "tonKotlin" }
 mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkitBarcodeScanning" }

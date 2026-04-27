@@ -4,9 +4,10 @@ import android.content.Context
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
+import io.horizontalsystems.tonkit.api.ApiKeyProvider
+import io.horizontalsystems.tonkit.api.RateLimitInterceptor
 import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.api.TonApiListener
-import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.EventInfo
 import io.horizontalsystems.tonkit.models.Jetton
@@ -193,10 +194,14 @@ class TonKit(
 //    }
 
     companion object {
-        private val okHttpClient: OkHttpClient by lazy {
+        private fun buildOkHttpClient(apiKeys: List<String>): OkHttpClient {
+            val builder = OkHttpClient.Builder()
+            if (apiKeys.isNotEmpty()) {
+                builder.addInterceptor(RateLimitInterceptor(ApiKeyProvider(apiKeys)))
+            }
             val logging = HttpLoggingInterceptor()
             logging.level = Level.NONE
-            OkHttpClient.Builder()
+            return builder
                 .addInterceptor(logging)
                 .build()
         }
@@ -206,12 +211,14 @@ class TonKit(
             network: Network,
             context: Context,
             walletId: String,
+            apiKeys: List<String> = emptyList(),
         ): TonKit {
             val address = tonWallet.address
 
             val database = KitDatabase.getInstance(context, "${walletId}-${network.name}")
 
-            val api = getTonApi(network)
+            val okHttpClient = buildOkHttpClient(apiKeys)
+            val api = TonApi(network, okHttpClient)
             val transactionSigner = getTransactionSigner(api)
 
             val accountManager = AccountManager(address, api, database.accountDao())
@@ -220,7 +227,12 @@ class TonKit(
 
             val transactionSender = when (tonWallet) {
                 is TonWallet.FullAccess -> {
-                    TransactionSender(api, address, tonWallet.hashSigner, tonWallet.publicKeyEd25519)
+                    TransactionSender(
+                        api,
+                        address,
+                        tonWallet.hashSigner,
+                        tonWallet.publicKeyEd25519
+                    )
                 }
 
                 is TonWallet.WatchOnly -> null
@@ -240,11 +252,17 @@ class TonKit(
             )
         }
 
-        fun getTonApi(network: Network) = TonApi(network, okHttpClient)
+        fun getTonApi(network: Network, apiKeys: List<String> = emptyList()) =
+            TonApi(network, buildOkHttpClient(apiKeys))
+
         fun getTransactionSigner(api: TonApi) = TransactionSigner(api)
 
-        suspend fun getJetton(network: Network, address: Address): Jetton {
-            return getTonApi(network).getJettonInfo(address)
+        suspend fun getJetton(
+            network: Network,
+            address: Address,
+            apiKeys: List<String> = emptyList()
+        ): Jetton {
+            return getTonApi(network, apiKeys).getJettonInfo(address)
         }
 
         fun validateAddress(address: String) {
