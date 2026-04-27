@@ -4,6 +4,7 @@ import android.content.Context
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
+import io.horizontalsystems.tonkit.api.AnonymousRateLimitInterceptor
 import io.horizontalsystems.tonkit.api.ApiKeyProvider
 import io.horizontalsystems.tonkit.api.RateLimitInterceptor
 import io.horizontalsystems.tonkit.api.TonApi
@@ -198,6 +199,8 @@ class TonKit(
             val builder = OkHttpClient.Builder()
             if (apiKeys.isNotEmpty()) {
                 builder.addInterceptor(RateLimitInterceptor(ApiKeyProvider(apiKeys)))
+            } else {
+                builder.addInterceptor(AnonymousRateLimitInterceptor())
             }
             val logging = HttpLoggingInterceptor()
             logging.level = Level.NONE
