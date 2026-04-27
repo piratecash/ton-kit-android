@@ -286,7 +286,7 @@ class RateLimitInterceptorTest {
     // --- Retry-After parsing ---
 
     @Test
-    fun intercept_noRetryAfterHeader_defaultsTo30s() {
+    fun intercept_noRetryAfterHeader_defaultsTo5s() {
         val client = createClient(keyCount = 1)
         server.enqueue(enqueue429())
         server.enqueue(MockResponse().setResponseCode(200))
@@ -294,11 +294,11 @@ class RateLimitInterceptorTest {
         client.newCall(request()).execute()
 
         assertTrue(sleepCalls.isNotEmpty())
-        assertEquals(30_000L, sleepCalls[0])
+        assertEquals(5_000L, sleepCalls[0])
     }
 
     @Test
-    fun intercept_invalidRetryAfterHeader_defaultsTo30s() {
+    fun intercept_invalidRetryAfterHeader_defaultsTo5s() {
         val client = createClient(keyCount = 1)
         server.enqueue(enqueue429("not-a-number"))
         server.enqueue(MockResponse().setResponseCode(200))
@@ -306,7 +306,7 @@ class RateLimitInterceptorTest {
         client.newCall(request()).execute()
 
         assertTrue(sleepCalls.isNotEmpty())
-        assertEquals(30_000L, sleepCalls[0])
+        assertEquals(5_000L, sleepCalls[0])
     }
 
     @Test
