@@ -10,9 +10,11 @@ import com.tonapps.wallet.data.tonconnect.entities.reply.DAppErrorEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppReply
 import io.horizontalsystems.tonkit.tonconnect.DAppManager
 import io.horizontalsystems.tonkit.tonconnect.LocalStorage
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
+import timber.log.Timber
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
@@ -28,7 +31,12 @@ class TonConnectEventManager(
     private val api: API,
     private val localStorage: LocalStorage,
 ) {
-    private val coroutineScope = CoroutineScope(Dispatchers.Default)
+    private val coroutineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Timber.w(throwable, "TonConnect event processing failed")
+    }
+    private val coroutineScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default + coroutineExceptionHandler
+    )
     private var handleDAppsJob: Job? = null
     private var collectEventsJob: Job? = null
 
@@ -74,7 +82,7 @@ class TonConnectEventManager(
                     true
                 }
                 .collect {
-                    processEvent(dApps, it)
+                    processEventSafely(dApps, it)
                 }
         }
     }
@@ -89,6 +97,14 @@ class TonConnectEventManager(
         return withTimeoutOrNull(timeoutMs) {
             _sseConnectedFlow.first { it }
         } != null
+    }
+
+    private fun processEventSafely(dApps: List<DAppEntity>, ssEvent: SSEvent) {
+        try {
+            processEvent(dApps, ssEvent)
+        } catch (e: Exception) {
+            Timber.w(e, "Failed processing TonConnect event")
+        }
     }
 
     private fun processEvent(dApps: List<DAppEntity>, ssEvent: SSEvent) {

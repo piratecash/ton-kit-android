@@ -139,10 +139,14 @@ class TonConnectKit(
     suspend fun send(
         app: DAppEntity,
         body: String,
-    ) = withContext(Dispatchers.IO) {
-        Log.d("TonConnectKit", "Sending message to dApp: ${app.url}")
-        val encrypted = app.encrypt(body)
-        api.tonconnectSend(app.publicKeyHex, app.clientId, base64(encrypted))
+    ) {
+        withContext(Dispatchers.IO) {
+            Log.d("TonConnectKit", "Sending message to dApp: ${app.url}")
+            val encrypted = app.encrypt(body)
+            if (!api.tonconnectSend(app.publicKeyHex, app.clientId, base64(encrypted))) {
+                throw IllegalStateException("Failed sending TonConnect event")
+            }
+        }
     }
 
     private fun createItems(

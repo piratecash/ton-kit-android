@@ -9,15 +9,17 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
+import timber.log.Timber
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-class API {
+class API(
+    bridgeUrl: String = BRIDGE_URL,
+    private val tonAPIHttpClient: OkHttpClient = createTonAPIHttpClient()
+) {
 
     val defaultHttpClient = baseOkHttpClientBuilder().build()
-
-    private val tonAPIHttpClient: OkHttpClient by lazy {
-        createTonAPIHttpClient()
-    }
+    private val bridgeBaseUrl = bridgeUrl.trimEnd('/')
 
 //    private val internalApi = InternalApi(context, defaultHttpClient)
 //    private val configRepository = ConfigRepository(context, scope, internalApi)
@@ -214,7 +216,7 @@ class API {
             return emptyFlow()
         }
         val value = publicKeys.joinToString(",")
-        var url = "${BRIDGE_URL}/events?client_id=$value"
+        var url = "$bridgeBaseUrl/events?client_id=$value"
         if (lastEventId != null) {
             url += "&last_event_id=$lastEventId"
         }
@@ -246,12 +248,20 @@ class API {
         publicKeyHex: String,
         clientId: String,
         body: String
-    ) {
+    ): Boolean {
         val mimeType = "text/plain".toMediaType()
-        val url = "${BRIDGE_URL}/message?client_id=$publicKeyHex&to=$clientId&ttl=300"
-        val response = tonAPIHttpClient.post(url, body.toRequestBody(mimeType))
-        if (!response.isSuccessful) {
-            throw Exception("Failed sending event: ${response.code}")
+        val url = "$bridgeBaseUrl/message?client_id=$publicKeyHex&to=$clientId&ttl=300"
+        return try {
+            tonAPIHttpClient.post(url, body.toRequestBody(mimeType)).use { response ->
+                val successful = response.isSuccessful
+                if (!successful) {
+                    Timber.w("Failed sending TonConnect event: HTTP ${response.code}")
+                }
+                successful
+            }
+        } catch (e: IOException) {
+            Timber.w(e, "Failed sending TonConnect event")
+            false
         }
     }
 
