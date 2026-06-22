@@ -13,6 +13,9 @@ import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.EventInfo
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.Network
+import io.horizontalsystems.tonkit.models.RawMessageBroadcastMetadata
+import io.horizontalsystems.tonkit.models.RawMessageBroadcastResult
+import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
 import io.horizontalsystems.tonkit.models.TagQuery
 import io.horizontalsystems.tonkit.models.TagToken
 import io.horizontalsystems.tonkit.storage.KitDatabase
@@ -29,13 +32,14 @@ import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level
 import java.math.BigInteger
 
-class TonKit(
+class TonKit internal constructor(
     private val address: Address,
     private val apiListener: TonApiListener,
     private val accountManager: AccountManager,
     private val jettonManager: JettonManager,
     private val eventManager: EventManager,
     private val transactionSender: TransactionSender?,
+    private val rawMessageBroadcaster: RawMessageBroadcaster,
     val network: Network,
     private val transactionSigner: TransactionSigner,
 ) {
@@ -139,6 +143,36 @@ class TonKit(
         transactionSender?.send(boc) ?: throw WalletError.WatchOnly
     }
 
+    suspend fun signedTonTransaction(
+        recipient: FriendlyAddress,
+        amount: SendAmount,
+        comment: String?,
+    ): SignedRawTonTransaction {
+        return transactionSender?.signedTonTransaction(recipient, amount, comment)
+            ?: throw WalletError.WatchOnly
+    }
+
+    suspend fun signedJettonTransaction(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?,
+    ): SignedRawTonTransaction {
+        return transactionSender?.signedJettonTransaction(jettonWallet, recipient, amount, comment)
+            ?: throw WalletError.WatchOnly
+    }
+
+    suspend fun broadcastRawTransaction(
+        rawMessage: ByteArray,
+        metadata: RawMessageBroadcastMetadata? = null,
+    ): RawMessageBroadcastResult {
+        return rawMessageBroadcaster.broadcast(rawMessage, metadata)
+    }
+
+    suspend fun transactionExistsByMessageHash(messageHash: String): Boolean {
+        return rawMessageBroadcaster.transactionExists(messageHash)
+    }
+
     fun startListener() {
         apiListener.start(address = address)
     }
@@ -159,6 +193,7 @@ class TonKit(
                 eventManager.sync()
             },
         ).awaitAll()
+        rawMessageBroadcaster.retryQueued()
     }
 
     suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet): String {
@@ -227,6 +262,7 @@ class TonKit(
             val accountManager = AccountManager(address, api, database.accountDao())
             val jettonManager = JettonManager(address, api, database.jettonDao())
             val eventManager = EventManager(address, api, database.eventDao())
+            val rawMessageBroadcaster = RawMessageBroadcaster(api, database.rawMessageBroadcastDao())
 
             val transactionSender = when (tonWallet) {
                 is TonWallet.FullAccess -> {
@@ -250,6 +286,7 @@ class TonKit(
                 jettonManager,
                 eventManager,
                 transactionSender,
+                rawMessageBroadcaster,
                 network,
                 transactionSigner
             )
