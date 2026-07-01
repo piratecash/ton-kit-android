@@ -20,6 +20,7 @@ data class RawMessageBroadcastResult(
 enum class RawMessageBroadcastStatus {
     Submitted,
     Queued,
+    AlreadyKnown,
 }
 
 data class RawMessageBroadcastMetadata(

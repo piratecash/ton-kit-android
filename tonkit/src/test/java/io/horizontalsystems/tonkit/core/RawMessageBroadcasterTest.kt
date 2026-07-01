@@ -53,25 +53,25 @@ class RawMessageBroadcasterTest {
     }
 
     @Test
-    fun broadcast_existingMessage_returnsSubmittedWithoutSend() = runBlocking {
+    fun broadcast_existingMessage_returnsAlreadyKnownWithoutSend() = runBlocking {
         val api = FakeApi(transactionExists = true)
         val broadcaster = broadcaster(api)
 
         val result = broadcaster.broadcast(RawMessageTestHelper.rawMessage(), null)
 
-        assertEquals(RawMessageBroadcastStatus.Submitted, result.status)
+        assertEquals(RawMessageBroadcastStatus.AlreadyKnown, result.status)
         assertEquals(0, api.sendCalls)
     }
 
     @Test
-    fun broadcast_knownSubmittedError_returnsSubmittedWithoutQueue() = runBlocking {
+    fun broadcast_knownSubmittedError_returnsAlreadyKnownWithoutQueue() = runBlocking {
         val api = FakeApi(sendError = IllegalStateException("external message was already imported"))
         val dao = InMemoryRawMessageBroadcastDao()
         val broadcaster = broadcaster(api, dao)
 
         val result = broadcaster.broadcast(RawMessageTestHelper.rawMessage(), null)
 
-        assertEquals(RawMessageBroadcastStatus.Submitted, result.status)
+        assertEquals(RawMessageBroadcastStatus.AlreadyKnown, result.status)
         assertEquals(0, dao.records().size)
     }
 

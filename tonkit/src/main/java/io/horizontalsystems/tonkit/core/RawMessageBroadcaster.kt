@@ -58,7 +58,7 @@ internal class RawMessageBroadcaster(
         return try {
             if (transactionExists(decoded.messageHash) || metadata.isSeqnoConsumed()) {
                 dao.delete(decoded.messageHash)
-                return submitted(decoded.messageHash)
+                return alreadyKnown(decoded.messageHash)
             }
 
             if (metadata?.isExpired() == true) {
@@ -113,7 +113,7 @@ internal class RawMessageBroadcaster(
     ): RawMessageBroadcastResult {
         if (error.isKnownSubmitted()) {
             dao.delete(decoded.messageHash)
-            return submitted(decoded.messageHash)
+            return alreadyKnown(decoded.messageHash)
         }
 
         if (error.isPermanent()) {
@@ -189,6 +189,13 @@ internal class RawMessageBroadcaster(
 
     private fun submitted(messageHash: String): RawMessageBroadcastResult {
         return RawMessageBroadcastResult(messageHash, RawMessageBroadcastStatus.Submitted)
+    }
+
+    // The message hash was already found on-chain (or its seqno already consumed) before we
+    // even attempted to send it. TON has no stable tx hash for an external message prior to
+    // inclusion, so this check — and the resulting status — is keyed on the message hash only.
+    private fun alreadyKnown(messageHash: String): RawMessageBroadcastResult {
+        return RawMessageBroadcastResult(messageHash, RawMessageBroadcastStatus.AlreadyKnown)
     }
 
     private fun Throwable.isKnownSubmitted(): Boolean {
