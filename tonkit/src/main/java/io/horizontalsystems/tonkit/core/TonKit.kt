@@ -27,6 +27,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import okhttp3.EventListener
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level
@@ -230,7 +231,10 @@ class TonKit internal constructor(
 //    }
 
     companion object {
-        private fun buildOkHttpClient(apiKeys: List<String>): OkHttpClient {
+        internal fun buildOkHttpClient(
+            apiKeys: List<String>,
+            eventListenerFactory: EventListener.Factory? = null,
+        ): OkHttpClient {
             val builder = OkHttpClient.Builder()
             if (apiKeys.isNotEmpty()) {
                 builder.addInterceptor(RateLimitInterceptor(ApiKeyProvider(apiKeys)))
@@ -239,6 +243,10 @@ class TonKit internal constructor(
             }
             val logging = HttpLoggingInterceptor()
             logging.level = Level.NONE
+            // Passive per-call network observer (default null -> behavior unchanged). Covers all
+            // tonapi.io REST calls (TonApi). The SSE stream (TonApiListener) is NOT observed: okhttp-sse
+            // rebuilds the client with eventListener(EventListener.NONE) at connect time.
+            eventListenerFactory?.let { builder.eventListenerFactory(it) }
             return builder
                 .addInterceptor(logging)
                 .build()
@@ -250,12 +258,13 @@ class TonKit internal constructor(
             context: Context,
             walletId: String,
             apiKeys: List<String> = emptyList(),
+            eventListenerFactory: EventListener.Factory? = null,
         ): TonKit {
             val address = tonWallet.address
 
             val database = KitDatabase.getInstance(context, "${walletId}-${network.name}")
 
-            val okHttpClient = buildOkHttpClient(apiKeys)
+            val okHttpClient = buildOkHttpClient(apiKeys, eventListenerFactory)
             val api = TonApi(network, okHttpClient)
             val transactionSigner = getTransactionSigner(api)
 
