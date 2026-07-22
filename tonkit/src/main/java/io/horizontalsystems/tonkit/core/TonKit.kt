@@ -163,6 +163,40 @@ class TonKit internal constructor(
             ?: throw WalletError.WatchOnly
     }
 
+    /** Offline overload — see [TransactionSender.signedTonTransaction]. */
+    suspend fun signedTonTransaction(
+        recipient: FriendlyAddress,
+        amount: SendAmount,
+        comment: String?,
+        seqno: Int,
+        validUntil: Long,
+        fee: BigInteger,
+    ): SignedRawTonTransaction {
+        return transactionSender?.signedTonTransaction(recipient, amount, comment, seqno, validUntil, fee)
+            ?: throw WalletError.WatchOnly
+    }
+
+    /** Offline overload — see [TransactionSender.signedJettonTransaction]. */
+    suspend fun signedJettonTransaction(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?,
+        seqno: Int,
+        validUntil: Long,
+        fee: BigInteger,
+    ): SignedRawTonTransaction {
+        return transactionSender
+            ?.signedJettonTransaction(jettonWallet, recipient, amount, comment, seqno, validUntil, fee)
+            ?: throw WalletError.WatchOnly
+    }
+
+    suspend fun getAccountSeqno(): Int =
+        transactionSender?.getAccountSeqno() ?: throw WalletError.WatchOnly
+
+    suspend fun getRawTime(): Int =
+        transactionSender?.getRawTime() ?: throw WalletError.WatchOnly
+
     suspend fun broadcastRawTransaction(
         rawMessage: ByteArray,
         metadata: RawMessageBroadcastMetadata? = null,

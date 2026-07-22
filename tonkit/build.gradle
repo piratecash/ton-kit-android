@@ -46,6 +46,14 @@ android {
         prefab = true
     }
 
+    testOptions {
+        unitTests {
+            // Jetton signing passes through android.util.Log.d (TransferEntity.coins);
+            // without this the pure-JVM offline signing test fails with "not mocked".
+            returnDefaultValues = true
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")

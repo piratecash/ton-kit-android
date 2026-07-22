@@ -27,6 +27,8 @@ internal class TonRawTransactionBuilder(
         recipient: FriendlyAddress,
         amount: TonKit.SendAmount,
         comment: String?,
+        seqno: Int? = null,
+        validUntil: Long? = null,
     ): TransferEntity {
         val amountData = amount.data()
 
@@ -37,6 +39,8 @@ internal class TonRawTransactionBuilder(
             comment = comment,
             walletAddress = sender.toRaw(),
             isTon = true,
+            seqno = seqno,
+            validUntil = validUntil,
         )
     }
 
@@ -45,6 +49,8 @@ internal class TonRawTransactionBuilder(
         recipient: FriendlyAddress,
         amount: BigInteger,
         comment: String?,
+        seqno: Int? = null,
+        validUntil: Long? = null,
     ): TransferEntity {
         return transfer(
             value = amount,
@@ -53,6 +59,8 @@ internal class TonRawTransactionBuilder(
             comment = comment,
             walletAddress = jettonWallet.toRaw(),
             isTon = false,
+            seqno = seqno,
+            validUntil = validUntil,
         )
     }
 
@@ -97,9 +105,13 @@ internal class TonRawTransactionBuilder(
         comment: String?,
         walletAddress: String,
         isTon: Boolean,
+        seqno: Int? = null,
+        validUntil: Long? = null,
     ): TransferEntity {
-        val seqno = api.getAccountSeqno(sender)
-        val timeout = safeTimeout()
+        // Explicit seqno/validUntil enable offline building: with both provided
+        // no network call is made on this path.
+        val resolvedSeqno = seqno ?: api.getAccountSeqno(sender)
+        val resolvedValidUntil = validUntil ?: safeTimeout()
         val walletEntity = WalletEntity(
             id = "id",
             publicKey = publicKeyEd25519,
@@ -111,13 +123,13 @@ internal class TonRawTransactionBuilder(
         )
 
         return TransferEntity.Builder(walletEntity)
-            .setSeqno(seqno)
+            .setSeqno(resolvedSeqno)
             .setAmount(Coins.of(value.toBigDecimal(Coins.DEFAULT_DECIMALS)))
             .setMax(isMax)
             .setDestination(recipient.addrStd)
             .setBounceable(recipient.isBounceable)
             .setComment(comment)
-            .setValidUntil(timeout)
+            .setValidUntil(resolvedValidUntil)
             .setToken(BalanceEntity(isTon, walletAddress))
             .build()
     }

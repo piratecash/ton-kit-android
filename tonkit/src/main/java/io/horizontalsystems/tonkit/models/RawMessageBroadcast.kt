@@ -21,6 +21,14 @@ enum class RawMessageBroadcastStatus {
     Submitted,
     Queued,
     AlreadyKnown,
+
+    /**
+     * The account seqno moved past this message's seqno, but the message itself
+     * was not found on-chain. Ambiguous: hash indexing can lag an accepted send,
+     * so the transaction may still have been executed — the message just will
+     * never be accepted again with this seqno.
+     */
+    SeqnoConsumed,
 }
 
 data class RawMessageBroadcastMetadata(

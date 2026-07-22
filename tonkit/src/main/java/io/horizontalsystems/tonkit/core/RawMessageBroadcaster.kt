@@ -7,8 +7,7 @@ import io.horizontalsystems.tonkit.models.RawMessageBroadcastStatus
 import io.horizontalsystems.tonkit.storage.RawMessageBroadcastDao
 import io.horizontalsystems.tonkit.storage.RawMessageBroadcastRecord
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 internal class RawMessageBroadcaster(
     private val api: IApi,
@@ -56,24 +55,65 @@ internal class RawMessageBroadcaster(
         metadata: EffectiveMetadata?,
     ): RawMessageBroadcastResult {
         return try {
-            if (transactionExists(decoded.messageHash) || metadata.isSeqnoConsumed()) {
+            if (transactionExists(decoded.messageHash)) {
                 dao.delete(decoded.messageHash)
                 return alreadyKnown(decoded.messageHash)
             }
 
-            if (metadata?.isExpired() == true) {
-                throw RawMessageExpiredException()
+            if (metadata.isSeqnoConsumed()) {
+                return seqnoConsumedResult(decoded.messageHash)
             }
 
-            withNetworkTimeout { api.send(decoded.bocBase64) }
-            dao.delete(decoded.messageHash)
-            submitted(decoded.messageHash)
-        } catch (error: TimeoutCancellationException) {
-            handleBroadcastError(error, decoded, metadata)
+            // No local wall-clock expiry pre-reject here: a device with a fast
+            // clock would locally reject a valid message. The network is
+            // authoritative — its "expired" response is classified as permanent.
+            sendDecoded(decoded, metadata)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
             handleBroadcastError(error, decoded, metadata)
+        }
+    }
+
+    private suspend fun sendDecoded(
+        decoded: DecodedRawMessage,
+        metadata: EffectiveMetadata?,
+    ): RawMessageBroadcastResult {
+        try {
+            withNetworkTimeout { api.send(decoded.bocBase64) }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            return handleSendError(error, decoded, metadata)
+        }
+
+        dao.delete(decoded.messageHash)
+        return submitted(decoded.messageHash)
+    }
+
+    // Seqno-text classification happens ONLY at the send boundary: a preflight
+    // RPC failure that merely mentions "seqno" must not be reported as consumed.
+    // Even a send rejection proves only a seqno mismatch, not direction — the
+    // status is trusted only after confirming the account seqno actually moved
+    // past ours; a failed confirmation falls back to the generic handling.
+    private suspend fun handleSendError(
+        error: Throwable,
+        decoded: DecodedRawMessage,
+        metadata: EffectiveMetadata?,
+    ): RawMessageBroadcastResult {
+        if (error.isSeqnoConsumedError() && confirmSeqnoConsumed(metadata)) {
+            return seqnoConsumedResult(decoded.messageHash)
+        }
+        return handleBroadcastError(error, decoded, metadata)
+    }
+
+    private suspend fun confirmSeqnoConsumed(metadata: EffectiveMetadata?): Boolean {
+        return try {
+            metadata.isSeqnoConsumed()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            false
         }
     }
 
@@ -95,8 +135,6 @@ internal class RawMessageBroadcaster(
 
             withNetworkTimeout { api.send(record.bocBase64) }
             dao.delete(record.messageHash)
-        } catch (error: TimeoutCancellationException) {
-            handleRetryError(error, record)
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
@@ -111,7 +149,9 @@ internal class RawMessageBroadcaster(
         decoded: DecodedRawMessage,
         metadata: EffectiveMetadata?,
     ): RawMessageBroadcastResult {
-        if (error.isKnownSubmitted()) {
+        // A seqno-mentioning error never takes the AlreadyKnown branch ("seqno
+        // already used" contains "already"); it flows to the permanent match.
+        if (!error.isSeqnoConsumedError() && error.isKnownSubmitted()) {
             dao.delete(decoded.messageHash)
             return alreadyKnown(decoded.messageHash)
         }
@@ -183,12 +223,29 @@ internal class RawMessageBroadcaster(
         return validUntil <= nowProvider()
     }
 
-    private suspend fun <T> withNetworkTimeout(block: suspend () -> T): T {
-        return withTimeout(networkTimeoutMillis) { block() }
+    // withTimeoutOrNull turns only OUR timeout into a plain (non-cancellation)
+    // exception; a caller/parent timeout cancelling this coroutine propagates
+    // as CancellationException and is never misread as a network fault.
+    private suspend fun <T : Any> withNetworkTimeout(block: suspend () -> T): T {
+        return withTimeoutOrNull(networkTimeoutMillis) { block() }
+            ?: throw NetworkTimeoutException(networkTimeoutMillis)
     }
 
     private fun submitted(messageHash: String): RawMessageBroadcastResult {
         return RawMessageBroadcastResult(messageHash, RawMessageBroadcastStatus.Submitted)
+    }
+
+    // The account seqno moved past ours, but hash lookup and seqno are different
+    // RPCs — the same message may already be accepted while its hash is not yet
+    // indexed. Re-check the hash: found means this very message made it on-chain
+    // (AlreadyKnown); not found stays ambiguous (SeqnoConsumed).
+    private suspend fun seqnoConsumedResult(messageHash: String): RawMessageBroadcastResult {
+        dao.delete(messageHash)
+        return if (transactionExists(messageHash)) {
+            alreadyKnown(messageHash)
+        } else {
+            RawMessageBroadcastResult(messageHash, RawMessageBroadcastStatus.SeqnoConsumed)
+        }
     }
 
     // The message hash was already found on-chain (or its seqno already consumed) before we
@@ -198,12 +255,16 @@ internal class RawMessageBroadcaster(
         return RawMessageBroadcastResult(messageHash, RawMessageBroadcastStatus.AlreadyKnown)
     }
 
+    private fun Throwable.isSeqnoConsumedError(): Boolean {
+        return messageText().containsAny(seqnoConsumedMessages)
+    }
+
     private fun Throwable.isKnownSubmitted(): Boolean {
         return messageText().containsAny(knownSubmittedMessages)
     }
 
     private fun Throwable.isPermanent(): Boolean {
-        return this is RawMessageExpiredException || messageText().containsAny(permanentMessages)
+        return messageText().containsAny(permanentMessages)
     }
 
     private fun Throwable.messageText(): String {
@@ -241,10 +302,17 @@ internal class RawMessageBroadcaster(
         val seqno: Int?,
     )
 
+    private class NetworkTimeoutException(timeoutMillis: Long) :
+        Exception("Network call timed out after $timeoutMillis ms")
+
     companion object {
         private const val MILLIS_IN_SECOND = 1000L
         private const val DEFAULT_RETRY_INTERVAL_SECONDS = 60L
         private const val DEFAULT_NETWORK_TIMEOUT_MILLIS = 30_000L
+
+        private val seqnoConsumedMessages = listOf(
+            "seqno",
+        )
 
         private val knownSubmittedMessages = listOf(
             "already",
@@ -262,5 +330,3 @@ internal class RawMessageBroadcaster(
         )
     }
 }
-
-private class RawMessageExpiredException : IllegalStateException("Raw message is expired")
