@@ -3,14 +3,15 @@ package com.tonapps.wallet.data.account.entities
 import android.os.Parcelable
 import com.tonapps.blockchain.ton.TonNetwork
 import com.tonapps.blockchain.ton.contract.BaseWalletContract
+import com.tonapps.blockchain.ton.contract.HashSigner
 import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.toAccountId
 import com.tonapps.blockchain.ton.extensions.toRawAddress
 import com.tonapps.blockchain.ton.extensions.toWalletAddress
 import com.tonapps.wallet.data.account.Wallet
 import kotlinx.parcelize.Parcelize
-import org.ton.api.pk.PrivateKeyEd25519
-import org.ton.api.pub.PublicKeyEd25519
+import org.ton.kotlin.crypto.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import org.ton.cell.Cell
 import org.ton.contract.wallet.WalletTransfer
 
@@ -20,6 +21,7 @@ data class WalletEntity(
     val type: Wallet.Type,
     val version: WalletVersion,
     val label: Wallet.Label,
+    val hashSigner: HashSigner,
     val ledger: Ledger? = null,
 ) {
 
@@ -36,7 +38,7 @@ data class WalletEntity(
     val contract: BaseWalletContract by lazy {
         val network = if (testnet) TonNetwork.TESTNET.value else TonNetwork.MAINNET.value
 
-        BaseWalletContract.create(publicKey, version.title, network)
+        BaseWalletContract.create(publicKey, version.title, network, hashSigner)
     }
 
     val maxMessages: Int
@@ -78,15 +80,15 @@ data class WalletEntity(
     }
 
     fun sign(
-        privateKeyEd25519: PrivateKeyEd25519,
         seqno: Int,
-        body: Cell
+        body: Cell,
+        useEmptySigner: Boolean
     ): Cell {
-        return contract.createTransferMessageCell(
+        return contract.createTransferMessageCellFromUnsignedBody(
             address = contract.address,
-            privateKey = privateKeyEd25519,
             seqno = seqno,
             unsignedBody = body,
+            useEmptySigner = useEmptySigner
         )
     }
 }

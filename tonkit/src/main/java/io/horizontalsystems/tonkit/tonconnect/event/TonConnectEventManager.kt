@@ -2,6 +2,7 @@ package io.horizontalsystems.tonkit.tonconnect.event
 
 import android.util.Base64
 import android.util.Log
+import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.network.SSEvent
 import com.tonapps.wallet.api.API
 import com.tonapps.wallet.data.tonconnect.entities.DAppEntity
@@ -9,27 +10,40 @@ import com.tonapps.wallet.data.tonconnect.entities.reply.DAppErrorEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppReply
 import io.horizontalsystems.tonkit.tonconnect.DAppManager
 import io.horizontalsystems.tonkit.tonconnect.LocalStorage
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
-import org.ton.crypto.base64
+import timber.log.Timber
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 class TonConnectEventManager(
     private val dAppManager: DAppManager,
     private val api: API,
     private val localStorage: LocalStorage,
 ) {
-    private val coroutineScope = CoroutineScope(Dispatchers.Default)
+    private val coroutineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Timber.w(throwable, "TonConnect event processing failed")
+    }
+    private val coroutineScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Default + coroutineExceptionHandler
+    )
     private var handleDAppsJob: Job? = null
     private var collectEventsJob: Job? = null
 
-    private val handlers = mutableMapOf<String, ITonConnectEventHandler>()
-    private val receivedEventIds = mutableSetOf<String>()
+    private val handlers = ConcurrentHashMap<String, ITonConnectEventHandler>()
+    private val receivedEventIds: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
+
+    private val _sseConnectedFlow = MutableStateFlow(false)
 
     fun registerHandler(handler: ITonConnectEventHandler) {
         handlers[handler.method] = handler
@@ -50,17 +64,46 @@ class TonConnectEventManager(
 
     private fun handleDApps(dApps: List<DAppEntity>) {
         collectEventsJob?.cancel()
+        _sseConnectedFlow.value = false
+        // Clear received event IDs on SSE restart to prevent unbounded memory growth
+        // The lastEventId from localStorage ensures we don't reprocess old events
+        receivedEventIds.clear()
         collectEventsJob = coroutineScope.launch {
             val publicKeys = dApps.map { it.publicKeyHex }
 
-            api.tonconnectEvents(publicKeys, localStorage.getLastSSEventId())
+            api.tonconnectEvents(
+                publicKeys = publicKeys,
+                lastEventId = localStorage.getLastSSEventId(),
+                onConnected = { _sseConnectedFlow.value = true }
+            )
                 .retry {
+                    _sseConnectedFlow.value = false
                     delay(3000)
                     true
                 }
                 .collect {
-                    processEvent(dApps, it)
+                    processEventSafely(dApps, it)
                 }
+        }
+    }
+
+    /**
+     * Waits for SSE connection to be established.
+     * Returns true if connected within timeout, false otherwise.
+     */
+    suspend fun awaitSseReady(timeoutMs: Long = 5000): Boolean {
+        // Fast path: already connected
+        if (_sseConnectedFlow.value) return true
+        return withTimeoutOrNull(timeoutMs) {
+            _sseConnectedFlow.first { it }
+        } != null
+    }
+
+    private fun processEventSafely(dApps: List<DAppEntity>, ssEvent: SSEvent) {
+        try {
+            processEvent(dApps, ssEvent)
+        } catch (e: Exception) {
+            Timber.w(e, "Failed processing TonConnect event")
         }
     }
 
@@ -88,7 +131,7 @@ class TonConnectEventManager(
             if (handler != null) {
                 handler.handle(requestId, params, dApp)
             } else {
-                Log.w("AAA", "No handler registered for method $method")
+                Log.w("TonConnectEventManager", "No handler registered for method $method")
                 responseToDApp(dApp, DAppErrorEntity.methodNotSupported(requestId))
             }
 

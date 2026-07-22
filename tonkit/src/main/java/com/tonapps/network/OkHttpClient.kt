@@ -76,7 +76,10 @@ fun OkHttpClient.getBitmap(url: String): Bitmap {
 
 fun OkHttpClient.sseFactory() = EventSources.createFactory(this)
 
-fun OkHttpClient.sse(url: String): Flow<SSEvent> = callbackFlow<SSEvent> {
+fun OkHttpClient.sse(
+    url: String,
+    onConnected: (() -> Unit)? = null
+): Flow<SSEvent> = callbackFlow {
     Log.d("TonConnectBridge", "SSE: $url")
     val listener = object : EventSourceListener() {
         override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
@@ -97,6 +100,7 @@ fun OkHttpClient.sse(url: String): Flow<SSEvent> = callbackFlow<SSEvent> {
         override fun onOpen(eventSource: EventSource, response: Response) {
             super.onOpen(eventSource, response)
             Log.d("TonConnectBridge", "SSE opened: $response")
+            onConnected?.invoke()
         }
     }
     val request = requestBuilder(url)

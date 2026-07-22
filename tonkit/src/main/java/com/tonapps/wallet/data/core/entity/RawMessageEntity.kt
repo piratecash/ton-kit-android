@@ -10,8 +10,10 @@ import org.ton.block.AddrStd
 import org.ton.block.Coins
 import org.ton.block.StateInit
 import org.ton.cell.Cell
+import org.ton.contract.wallet.MessageData
 import org.ton.contract.wallet.WalletTransfer
 import org.ton.contract.wallet.WalletTransferBuilder
+import org.ton.tlb.CellRef
 
 @Parcelize
 data class RawMessageEntity(
@@ -35,11 +37,11 @@ data class RawMessageEntity(
 
     val walletTransfer: WalletTransfer by lazy {
         val builder = WalletTransferBuilder()
-        builder.stateInit = stateInit
         builder.destination = address
-        builder.body = payload
         builder.bounceable = addressValue.isBounceable()
         builder.coins = coins
+        val stateInitRef = stateInit?.let { CellRef(it, StateInit) }
+        builder.messageData = MessageData.raw(payload, stateInitRef)
         builder.build()
     }
 

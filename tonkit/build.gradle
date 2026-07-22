@@ -35,15 +35,23 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     buildFeatures {
         prefab = true
+    }
+
+    testOptions {
+        unitTests {
+            // Jetton signing passes through android.util.Log.d (TransferEntity.coins);
+            // without this the pure-JVM offline signing test fails with "not mocked".
+            returnDefaultValues = true
+        }
     }
 
     externalNativeBuild {
@@ -58,16 +66,19 @@ dependencies {
     implementation libs.androidx.core.ktx
     implementation libs.androidx.appcompat
     implementation libs.material
-    implementation libs.okhttp
+    // api (not implementation): okhttp3.EventListener.Factory is exposed in TonKit.getInstance's public
+    // signature, so consumers must resolve okhttp transitively from the published POM.
+    api libs.okhttp
     implementation libs.okhttp.sse
     implementation libs.moshi.kotlin
     implementation libs.moshi.adapters
     implementation libs.androidx.room.runtime
     implementation libs.androidx.room.ktx
     implementation libs.ton.kotlin.contract
-    implementation libs.ton.kotlin.mnemonic
+    implementation libs.ton.kotlin.crypto
     implementation libs.logging.interceptor
     implementation libs.androidx.security.crypto
+    implementation libs.timber
 
     compileOnly files('libs/libsodium.aar')
 
@@ -75,6 +86,7 @@ dependencies {
     ksp libs.androidx.room.compiler
 
     testImplementation libs.junit
+    testImplementation libs.okhttp.mockwebserver
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
 }

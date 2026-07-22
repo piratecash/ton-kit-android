@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.tonapps.blockchain.ton.TonNetwork
+import com.tonapps.blockchain.ton.contract.HashSigner
 import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.network.get
@@ -28,12 +29,11 @@ import io.horizontalsystems.tonkit.tonconnect.event.TonConnectEventManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
-import org.ton.api.pk.PrivateKeyEd25519
-import org.ton.api.pub.PublicKeyEd25519
 import org.ton.block.AddrStd
 import org.ton.block.StateInit
-import org.ton.crypto.base64
+import org.ton.kotlin.crypto.PublicKeyEd25519
 
 class TonConnectKit(
     private val dAppManager: DAppManager,
@@ -82,21 +82,26 @@ class TonConnectKit(
         walletId: String,
         tonWallet: TonWallet.FullAccess
     ): DAppEventSuccessEntity {
-        val privateKey = tonWallet.privateKey
-
         val walletEntity = WalletEntity(
             id = walletId,
-            publicKey = privateKey.publicKey(),
+            publicKey = tonWallet.publicKeyEd25519,
             type = Wallet.Type.Default,
             version = WalletVersion.V4R2,
+            hashSigner = tonWallet.hashSigner,
             label = Wallet.Label("", "", 0)
         )
-        return connect(walletEntity, privateKey, manifest, dAppRequestEntity.id, dAppRequestEntity.payload.items)
+        return connect(
+            walletEntity,
+            tonWallet.hashSigner,
+            manifest,
+            dAppRequestEntity.id,
+            dAppRequestEntity.payload.items
+        )
     }
 
     private suspend fun connect(
         wallet: WalletEntity,
-        privateKey: PrivateKeyEd25519,
+        hashSigner: HashSigner,
         manifest: DAppManifestEntity,
         clientId: String,
         requestItems: List<DAppItemEntity>,
@@ -107,7 +112,17 @@ class TonConnectKit(
 
         dAppManager.addApp(app)
 
-        val items = createItems(app, wallet, privateKey, requestItems)
+        // Wait for SSE connection to be established before sending response
+        // This fixes race condition where response is sent before SSE listener is ready
+        val sseReady = tonConnectEventManager.awaitSseReady()
+        if (!sseReady) {
+            Log.w(
+                "TonConnectKit",
+                "SSE connection timeout - proceeding with send anyway. Connection may fail."
+            )
+        }
+
+        val items = createItems(app, wallet, hashSigner, requestItems)
         val res = DAppEventSuccessEntity(items, appName, appVersion, wallet.maxMessages)
         send(app, res.toJSON())
 //        firebaseToken?.let {
@@ -124,34 +139,42 @@ class TonConnectKit(
     suspend fun send(
         app: DAppEntity,
         body: String,
-    ) = withContext(Dispatchers.IO) {
-        Log.i("AAA", "send body: $body")
-        val encrypted = app.encrypt(body)
-        api.tonconnectSend(app.publicKeyHex, app.clientId, base64(encrypted))
+    ) {
+        withContext(Dispatchers.IO) {
+            Log.d("TonConnectKit", "Sending message to dApp: ${app.url}")
+            val encrypted = app.encrypt(body)
+            if (!api.tonconnectSend(app.publicKeyHex, app.clientId, base64(encrypted))) {
+                throw IllegalStateException("Failed sending TonConnect event")
+            }
+        }
     }
 
     private fun createItems(
         app: DAppEntity,
         wallet: WalletEntity,
-        privateKey: PrivateKeyEd25519,
+        hashSigner: HashSigner,
         items: List<DAppItemEntity>
     ): List<DAppReply> {
         val result = mutableListOf<DAppReply>()
         for (requestItem in items) {
             if (requestItem.name == DAppItemEntity.TON_ADDR) {
-                result.add(createAddressItem(
-                    accountId = wallet.accountId,
-                    testnet = wallet.testnet,
-                    publicKey = wallet.publicKey,
-                    stateInit = wallet.contract.stateInit
-                ))
+                result.add(
+                    createAddressItem(
+                        accountId = wallet.accountId,
+                        testnet = wallet.testnet,
+                        publicKey = wallet.publicKey,
+                        stateInit = wallet.contract.stateInit
+                    )
+                )
             } else if (requestItem.name == DAppItemEntity.TON_PROOF) {
-                result.add(createProofItem(
-                    payload = requestItem.payload ?: "",
-                    domain = app.domain,
-                    address = wallet.contract.address,
-                    privateWalletKey = privateKey,
-                ))
+                result.add(
+                    createProofItem(
+                        payload = requestItem.payload ?: "",
+                        domain = app.domain,
+                        address = wallet.contract.address,
+                        hashSigner = hashSigner,
+                    )
+                )
             }
         }
         return result
@@ -161,11 +184,11 @@ class TonConnectKit(
         payload: String,
         domain: ProofDomainEntity,
         address: AddrStd,
-        privateWalletKey: PrivateKeyEd25519,
+        hashSigner: HashSigner
     ): DAppProofItemReplySuccess {
         val proof = WalletProof.sign(
             address,
-            privateWalletKey,
+            hashSigner,
             payload,
             domain,
         )
@@ -211,17 +234,12 @@ class TonConnectKit(
         app
     }
 
-
-
-    fun getManifest(manifestUrl: String): DAppManifestEntity {
-        //            val local = localDataSource.getManifest(sourceUrl)
-        //            if (local == null) {
-        val remote = loadManifest(manifestUrl)
-        //                localDataSource.setManifest(sourceUrl, remote)
-        return remote
-        //            } else {
-        //                local
-        //            }
+    suspend fun getManifest(manifestUrl: String): DAppManifestEntity {
+        return withTimeout(MANIFEST_TIMEOUT_MS) {
+            withContext(Dispatchers.IO) {
+                loadManifest(manifestUrl)
+            }
+        }
     }
 
     private fun loadManifest(url: String): DAppManifestEntity {
@@ -243,6 +261,8 @@ class TonConnectKit(
     }
 
     companion object {
+        private const val MANIFEST_TIMEOUT_MS = 5000L
+
         fun getInstance(context: Context, appName: String, appVersion: String): TonConnectKit {
             val api = API()
             val database = TonConnectKitDatabase.getInstance(context, "ton-connect")
@@ -274,4 +294,4 @@ class TonConnectKit(
 sealed class TonConnectError : Error()
 
 class UriError(override val message: String) : TonConnectError()
-
+class ManifestLoadError(override val message: String) : TonConnectError()
