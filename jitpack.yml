@@ -3,5 +3,5 @@ jdk:
 before_install:
   - touch local.properties
 install:
-  - ./gradlew test
+  - ./gradlew test --refresh-dependencies
   - ./gradlew publishToMavenLocal
