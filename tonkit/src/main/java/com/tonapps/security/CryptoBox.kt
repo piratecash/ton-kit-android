@@ -48,9 +48,14 @@ object CryptoBox {
             ?: ByteArray(cipher.size - Box.overheadLength)
     }
 
-    // libsodium parity: a low-order peer key gives an all-zero, publicly computable shared point.
-    private fun sharedBox(remotePublicKey: ByteArray, localPrivateKey: ByteArray): Box? {
-        val sharedPoint = ScalarMult.scalseMult(localPrivateKey, remotePublicKey)
-        return if (sharedPoint?.any { it != 0.toByte() } == true) Box(remotePublicKey, localPrivateKey) else null
-    }
+    /** libsodium parity: a low-order key gives an all-zero, publicly computable shared point. */
+    fun isValidPublicKey(key: ByteArray): Boolean =
+        key.size == Box.publicKeyLength &&
+            ScalarMult.scalseMult(PROBE_SCALAR, key)?.any { it != 0.toByte() } == true
+
+    private fun sharedBox(remotePublicKey: ByteArray, localPrivateKey: ByteArray): Box? =
+        if (isValidPublicKey(remotePublicKey)) Box(remotePublicKey, localPrivateKey) else null
+
+    // Clamping makes every scalar a multiple of the cofactor, so any scalar exposes a low-order key.
+    private val PROBE_SCALAR = ByteArray(ScalarMult.scalarLength) { 1 }
 }

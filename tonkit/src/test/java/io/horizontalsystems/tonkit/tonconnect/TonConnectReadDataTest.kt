@@ -91,6 +91,22 @@ class TonConnectReadDataTest {
     }
 
     @Test
+    fun readData_invalidClientKey_throwsIllegalArgument() {
+        listOf(
+            "0".repeat(64),
+            "01" + "0".repeat(62),
+            "e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800",
+            CLIENT_ID.dropLast(2),
+            CLIENT_ID + "00",
+            "zz" + CLIENT_ID.drop(2),
+        ).forEach { id ->
+            assertThrows(id, IllegalArgumentException::class.java) {
+                TonConnectKit.readData("tc://?v=2&id=$id&r=$ENCODED_R")
+            }
+        }
+    }
+
+    @Test
     fun readData_rIsNotJson_throwsJsonException() {
         assertThrows(JSONException::class.java) { TonConnectKit.readData("tc://?v=2&id=$CLIENT_ID&r=not-json") }
     }
