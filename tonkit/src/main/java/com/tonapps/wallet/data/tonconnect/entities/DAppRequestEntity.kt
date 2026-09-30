@@ -20,17 +20,17 @@ data class DAppRequestEntity(
             val query = uri.substringBefore('#').substringAfter('?', "")
             return DAppRequestEntity(
                 v = query.parameter("v")?.toInt() ?: throw IllegalArgumentException("v is required"),
-                id = query.parameter("id")?.also(::requireClientPublicKey)
+                id = query.parameter("id")
+                    ?.also { require(isValidClientId(it)) { "id is not a valid client public key" } }
                     ?: throw IllegalArgumentException("id is required"),
                 r = query.parameter("r") ?: throw IllegalArgumentException("r is required"),
                 ret = query.parameter("ret")
             )
         }
 
-        // Checked before anything is stored: a key the bridge cannot encrypt to would leave an undeletable connection.
-        private fun requireClientPublicKey(id: String) = require(
+        /** A client key the bridge can encrypt to; checked before a connection is stored. */
+        internal fun isValidClientId(id: String): Boolean =
             id.length == CLIENT_ID_LENGTH && id.all { Character.digit(it, 16) >= 0 } && CryptoBox.isValidPublicKey(id.hex())
-        ) { "id is not a valid client public key" }
 
         private const val CLIENT_ID_LENGTH = 64
 

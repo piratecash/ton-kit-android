@@ -77,7 +77,10 @@ class TonConnectKit(
                 return json
             }
         }
-        tonConnectEventManager.responseToDApp(dAppEntity, disconnect)
+        // Older versions stored keys the bridge cannot encrypt to; such a session is only removed locally.
+        if (DAppRequestEntity.isValidClientId(dAppEntity.clientId)) {
+            tonConnectEventManager.responseToDApp(dAppEntity, disconnect)
+        }
         dAppManager.remove(dAppEntity)
     }
 
