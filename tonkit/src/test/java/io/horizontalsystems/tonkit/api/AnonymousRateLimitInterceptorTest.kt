@@ -1,5 +1,9 @@
 package io.horizontalsystems.tonkit.api
 
+import co.touchlab.kermit.Logger
+import co.touchlab.kermit.Severity
+import co.touchlab.kermit.StaticConfig
+import co.touchlab.kermit.TestLogWriter
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
@@ -10,22 +14,17 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import timber.log.Timber
 
 class AnonymousRateLimitInterceptorTest {
 
     private lateinit var server: MockWebServer
     private val sleepCalls = mutableListOf<Long>()
-    private val logMessages = mutableListOf<String>()
+    private val logWriter = TestLogWriter(loggable = Severity.Verbose)
+    private val logger = Logger(StaticConfig(logWriterList = listOf(logWriter)), "TonKit:MainNet")
+    private val logMessages get() = logWriter.logs.map { it.message }
 
     private val fakeSleeper = RateLimitInterceptor.Sleeper { ms ->
         sleepCalls.add(ms)
-    }
-
-    private val testTree = object : Timber.Tree() {
-        override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
-            logMessages.add(message)
-        }
     }
 
     @Before
@@ -33,19 +32,17 @@ class AnonymousRateLimitInterceptorTest {
         server = MockWebServer()
         server.start()
         sleepCalls.clear()
-        logMessages.clear()
-        Timber.plant(testTree)
+        logWriter.reset()
     }
 
     @After
     fun tearDown() {
         server.shutdown()
-        Timber.uproot(testTree)
     }
 
     private fun createClient(): OkHttpClient =
         OkHttpClient.Builder()
-            .addInterceptor(AnonymousRateLimitInterceptor(sleeper = fakeSleeper))
+            .addInterceptor(AnonymousRateLimitInterceptor(logger, sleeper = fakeSleeper))
             .build()
 
     private fun request(): Request =
@@ -172,5 +169,18 @@ class AnonymousRateLimitInterceptorTest {
         val log = logMessages.single()
         assertTrue(log.contains("X-RateLimit-Remaining=0"))
         assertTrue(log.contains("X-RateLimit-Reset=1234"))
+    }
+
+    @Test
+    fun intercept_429_logsWarningWithKitTag() {
+        val client = createClient()
+        server.enqueue(MockResponse().setResponseCode(429))
+        server.enqueue(MockResponse().setResponseCode(200).setBody("ok"))
+
+        client.newCall(request()).execute()
+
+        val entry = logWriter.logs.single()
+        assertEquals("TonKit:MainNet", entry.tag)
+        assertEquals(Severity.Warn, entry.severity)
     }
 }

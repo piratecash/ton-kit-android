@@ -7,7 +7,6 @@ import org.ton.tlb.TlbCodec
 import org.ton.tlb.TlbObject
 import org.ton.tlb.loadTlb
 import org.ton.tlb.storeTlb
-import timber.log.Timber
 
 inline fun <reified T : TlbObject> T.toCell(): Cell {
     val codec = T::class.java.getMethod("tlbCodec").invoke(null) as TlbCodec<T>
@@ -34,8 +33,7 @@ inline fun <reified T: TlbObject> String.toTlb(): T? {
         boc.parse {
             loadTlb(T::class.java.getMethod("tlbCodec").invoke(null) as TlbCodec<T>)
         }
-    } catch (e: Exception) {
-        Timber.d("Failed to parse TLB: ${e.message}")
+    } catch (_: Exception) {
         null
     }
 }

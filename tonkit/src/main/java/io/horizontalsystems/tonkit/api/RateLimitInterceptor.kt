@@ -1,12 +1,13 @@
 package io.horizontalsystems.tonkit.api
 
+import co.touchlab.kermit.Logger
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
-import timber.log.Timber
 
 class RateLimitInterceptor(
     private val apiKeyProvider: ApiKeyProvider,
+    private val logger: Logger,
     private val sleeper: Sleeper = Sleeper { Thread.sleep(it) }
 ) : Interceptor {
 
@@ -26,10 +27,10 @@ class RateLimitInterceptor(
 
             val nextKey = apiKeyProvider.nextHealthyKey()
             if (nextKey != null) {
-                Timber.tag(TAG).i("Rate limited, rotating to healthy key (attempt %d/%d)", attempt, MAX_RETRIES)
+                logger.i { "Rate limited, rotating to healthy key (attempt $attempt/$MAX_RETRIES)" }
                 apiKey = nextKey
             } else {
-                Timber.tag(TAG).i("All keys banned (attempt %d/%d)", attempt, MAX_RETRIES)
+                logger.i { "All keys banned (attempt $attempt/$MAX_RETRIES)" }
                 apiKey = waitForHealthyKey()
             }
 
@@ -49,7 +50,7 @@ class RateLimitInterceptor(
 
             val waitMs = apiKeyProvider.msUntilAnyHealthyKey()
             if (waitMs > 0) {
-                Timber.tag(TAG).i("No healthy keys, waiting %dms", waitMs)
+                logger.i { "No healthy keys, waiting ${waitMs}ms" }
                 sleeper.sleep(waitMs)
             }
         }
@@ -63,7 +64,6 @@ class RateLimitInterceptor(
     }
 
     companion object {
-        private const val TAG = "RateLimitInterceptor"
         private const val MAX_RETRIES = 3
         private const val AUTHORIZATION_HEADER = "Authorization"
         private const val BEARER_PREFIX = "Bearer "

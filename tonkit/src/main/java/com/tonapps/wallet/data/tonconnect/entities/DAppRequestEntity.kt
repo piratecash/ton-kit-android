@@ -1,27 +1,33 @@
 package com.tonapps.wallet.data.tonconnect.entities
 
 
-import android.net.Uri
-import android.os.Parcelable
-import kotlinx.parcelize.IgnoredOnParcel
-import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
+import java.net.URLDecoder
 
-@Parcelize
 data class DAppRequestEntity(
     val v: Int = 2,
     val id: String,
     val r: String,
     val ret: String? = null,
-) : Parcelable {
+) {
 
-    @IgnoredOnParcel
     val payload = DAppPayloadEntity(JSONObject(r))
 
-    constructor(uri: Uri) : this(
-        v = uri.getQueryParameter("v")?.toInt() ?: throw IllegalArgumentException("v is required"),
-        id = uri.getQueryParameter("id") ?: throw IllegalArgumentException("id is required"),
-        r = uri.getQueryParameter("r") ?: throw IllegalArgumentException("r is required"),
-        ret = uri.getQueryParameter("ret")
-    )
+    companion object {
+        fun parse(uri: String): DAppRequestEntity {
+            val query = uri.substringBefore('#').substringAfter('?', "")
+            return DAppRequestEntity(
+                v = query.parameter("v")?.toInt() ?: throw IllegalArgumentException("v is required"),
+                id = query.parameter("id") ?: throw IllegalArgumentException("id is required"),
+                r = query.parameter("r") ?: throw IllegalArgumentException("r is required"),
+                ret = query.parameter("ret")
+            )
+        }
+
+        // Same lookup as android.net.Uri.getQueryParameter: first match by raw name, `+` decodes to a space.
+        private fun String.parameter(name: String): String? =
+            split('&')
+                .firstOrNull { it.substringBefore('=') == name }
+                ?.let { URLDecoder.decode(it.substringAfter('=', ""), "UTF-8") }
+    }
 }

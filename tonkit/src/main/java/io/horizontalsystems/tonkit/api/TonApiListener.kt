@@ -1,6 +1,6 @@
 package io.horizontalsystems.tonkit.api
 
-import android.util.Log
+import co.touchlab.kermit.Logger
 import com.tonapps.network.SSEvent
 import com.tonapps.network.sse
 import io.horizontalsystems.tonkit.Address
@@ -16,7 +16,11 @@ import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
-class TonApiListener(val network: Network, okHttpClient: OkHttpClient) : IApiListener {
+class TonApiListener(
+    val network: Network,
+    okHttpClient: OkHttpClient,
+    private val logger: Logger,
+) : IApiListener {
     enum class State {
         Connecting,
         Connected,
@@ -40,7 +44,7 @@ class TonApiListener(val network: Network, okHttpClient: OkHttpClient) : IApiLis
             Network.TestNet -> "https://testnet.tonapi.io"
         }
 
-        streamingAPI = StreamingAPI(serverUrl, okHttpClient)
+        streamingAPI = StreamingAPI(serverUrl, okHttpClient, logger)
     }
 
     override fun start(address: Address) {
@@ -81,9 +85,7 @@ class TonApiListener(val network: Network, okHttpClient: OkHttpClient) : IApiLis
     }
 
     private suspend fun handleEvent(ssEvent: SSEvent) {
-        Log.i("AAA", "ssEvent: $ssEvent")
         val json = ssEvent.json
-        Log.i("AAA", "json: $json")
         try {
             if (json.has("tx_hash")) {
                 _transactionFlow.emit(json.getString("tx_hash"))
@@ -91,11 +93,11 @@ class TonApiListener(val network: Network, okHttpClient: OkHttpClient) : IApiLis
                 val keys = Iterable {
                     json.keys()
                 }.joinToString(",")
-                Log.i("AAA", "no tx_hash, keys: $keys")
+                logger.i { "no tx_hash, keys: $keys" }
             }
 
         } catch (e: Throwable) {
-            Log.e("AAA", "error:", e)
+            logger.e(e) { "Failed handling SSE event" }
         }
     }
 
@@ -110,10 +112,11 @@ class TonApiListener(val network: Network, okHttpClient: OkHttpClient) : IApiLis
 class StreamingAPI(
     private val serverUrl: String,
     private val okHttpClient: OkHttpClient,
+    private val logger: Logger,
 ) {
 
     fun accountTransactionsFlow(accountId: String): Flow<SSEvent> {
-        return okHttpClient.sse("$serverUrl/v2/sse/accounts/transactions?accounts=${accountId}")
+        return okHttpClient.sse("$serverUrl/v2/sse/accounts/transactions?accounts=${accountId}", logger)
     }
 
 }

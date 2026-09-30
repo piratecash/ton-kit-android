@@ -1,8 +1,5 @@
 package com.tonapps.wallet.data.account
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
-
 sealed class Wallet {
 
     companion object {
@@ -16,12 +13,11 @@ sealed class Wallet {
         Default(0), Watch(1), Testnet(2), Signer(3), Lockup(4), Ledger(5), SignerQR(6)
     }
 
-    @Parcelize
     data class Label(
         val accountName: String,
         val emoji: CharSequence,
         val color: Int
-    ): Parcelable {
+    ) {
 
         val isEmpty: Boolean
             get() = accountName.isBlank() && emoji.isBlank()

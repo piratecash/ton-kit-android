@@ -1,5 +1,6 @@
 package io.horizontalsystems.tonkit.api
 
+import co.touchlab.kermit.Logger
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
@@ -48,7 +49,7 @@ class RateLimitInterceptorTest {
         sleeper: RateLimitInterceptor.Sleeper = fakeSleeper
     ): OkHttpClient =
         OkHttpClient.Builder()
-            .addInterceptor(RateLimitInterceptor(provider, sleeper))
+            .addInterceptor(RateLimitInterceptor(provider, Logger.withTag("RateLimitInterceptorTest"), sleeper))
             .build()
 
     private fun createClient(keyCount: Int): OkHttpClient =

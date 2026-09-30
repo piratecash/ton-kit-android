@@ -30,15 +30,15 @@ class EventsViewModel : ViewModel() {
             }
         }
 
-        reloadEvents()
+        viewModelScope.launch { reloadEvents() }
     }
 
     fun onBottomReached() {
         page++
-        reloadEvents()
+        viewModelScope.launch { reloadEvents() }
     }
 
-    private fun reloadEvents() {
+    private suspend fun reloadEvents() {
         events = tonKit.events(tagQuery, limit = 10 * page)
         emitState()
     }

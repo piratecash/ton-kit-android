@@ -1,11 +1,13 @@
 package io.horizontalsystems.tonkit.core
 
-import android.content.Context
+import co.touchlab.kermit.Logger
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
+import io.horizontalsystems.tonkit.PlatformContext
 import io.horizontalsystems.tonkit.api.AnonymousRateLimitInterceptor
 import io.horizontalsystems.tonkit.api.ApiKeyProvider
+import io.horizontalsystems.tonkit.api.IApiListener
 import io.horizontalsystems.tonkit.api.RateLimitInterceptor
 import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.api.TonApiListener
@@ -18,13 +20,28 @@ import io.horizontalsystems.tonkit.models.RawMessageBroadcastResult
 import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
 import io.horizontalsystems.tonkit.models.TagQuery
 import io.horizontalsystems.tonkit.models.TagToken
+import io.horizontalsystems.sqlcipher.room.DatabaseKeyMismatchException
+import io.horizontalsystems.sqlcipher.room.DatabaseMigrationConflictException
+import io.horizontalsystems.sqlcipher.room.DatabaseMigrationInProgressException
+import io.horizontalsystems.sqlcipher.room.DatabaseMigrationRequiredException
+import io.horizontalsystems.sqlcipher.room.DatabaseMigrationResult
+import io.horizontalsystems.sqlcipher.room.InsufficientDatabaseMigrationSpaceException
 import io.horizontalsystems.tonkit.storage.KitDatabase
+import io.horizontalsystems.tonkit.storage.databaseFile
+import io.horizontalsystems.tonkit.storage.kitDatabaseName
+import io.horizontalsystems.tonkit.storage.requireValidDatabaseKey
+import io.horizontalsystems.tonkit.storage.requireValidKitDatabase
+import io.horizontalsystems.tonkit.storage.tonKitNamespace
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import okhttp3.EventListener
@@ -32,10 +49,11 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level
 import java.math.BigInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class TonKit internal constructor(
     private val address: Address,
-    private val apiListener: TonApiListener,
+    private val apiListener: IApiListener,
     private val accountManager: AccountManager,
     private val jettonManager: JettonManager,
     private val eventManager: EventManager,
@@ -43,6 +61,7 @@ class TonKit internal constructor(
     private val rawMessageBroadcaster: RawMessageBroadcaster,
     val network: Network,
     private val transactionSigner: TransactionSigner,
+    dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
     val receiveAddress get() = address
 
@@ -55,15 +74,8 @@ class TonKit internal constructor(
     val account get() = accountFlow.value
     val jettonBalanceMap get() = jettonBalanceMapFlow.value
 
-    private val coroutineScope = CoroutineScope(Dispatchers.Default)
-
-    init {
-        coroutineScope.launch {
-            apiListener.transactionFlow.collect {
-                handleEvent(it)
-            }
-        }
-    }
+    private val coroutineScope = CoroutineScope(dispatcher)
+    private val eventCollector = AtomicReference<Job?>(null)
 
     suspend fun refresh() {
         sync()
@@ -80,8 +92,13 @@ class TonKit internal constructor(
         ).awaitAll()
     }
 
-    fun stop() {
-        this.stopListener()
+    /** Stops the listener and waits for the event handling it started, so no database access follows. */
+    suspend fun stop() {
+        stopListener()
+        // Released only once completed: a stop cancelled mid-join must leave the collector to the next stop.
+        val collector = eventCollector.get() ?: return
+        collector.cancelAndJoin()
+        eventCollector.compareAndSet(collector, null)
     }
 
     private suspend fun handleEvent(eventId: String) {
@@ -95,7 +112,7 @@ class TonKit internal constructor(
         }
     }
 
-    fun events(tagQuery: TagQuery, beforeLt: Long? = null, limit: Int? = null): List<Event> {
+    suspend fun events(tagQuery: TagQuery, beforeLt: Long? = null, limit: Int? = null): List<Event> {
         return eventManager.events(tagQuery, beforeLt, limit)
     }
 
@@ -103,7 +120,7 @@ class TonKit internal constructor(
         return eventManager.eventFlow(tagQuery)
     }
 
-    fun tagTokens(): List<TagToken> {
+    suspend fun tagTokens(): List<TagToken> {
         return eventManager.tagTokens()
     }
 
@@ -209,6 +226,18 @@ class TonKit internal constructor(
     }
 
     fun startListener() {
+        val collector = coroutineScope.launch(start = CoroutineStart.LAZY) {
+            apiListener.transactionFlow.collect {
+                handleEvent(it)
+            }
+        }
+        // A published collector stays owned until it completes, even before its creator has started it.
+        val current = eventCollector.get()
+        if (current?.isCompleted != false && eventCollector.compareAndSet(current, collector)) {
+            collector.start()
+        } else {
+            collector.cancel()
+        }
         apiListener.start(address = address)
     }
 
@@ -265,15 +294,18 @@ class TonKit internal constructor(
 //    }
 
     companion object {
+        private fun kitLogger(network: Network) = Logger.withTag("TonKit:${network.name}")
+
         internal fun buildOkHttpClient(
+            logger: Logger,
             apiKeys: List<String>,
             eventListenerFactory: EventListener.Factory? = null,
         ): OkHttpClient {
             val builder = OkHttpClient.Builder()
             if (apiKeys.isNotEmpty()) {
-                builder.addInterceptor(RateLimitInterceptor(ApiKeyProvider(apiKeys)))
+                builder.addInterceptor(RateLimitInterceptor(ApiKeyProvider(apiKeys), logger))
             } else {
-                builder.addInterceptor(AnonymousRateLimitInterceptor())
+                builder.addInterceptor(AnonymousRateLimitInterceptor(logger))
             }
             val logging = HttpLoggingInterceptor()
             logging.level = Level.NONE
@@ -286,25 +318,46 @@ class TonKit internal constructor(
                 .build()
         }
 
-        fun getInstance(
+        /**
+         * Opens the wallet's database, which [migrateDatabase] must have encrypted with the same
+         * [databaseKey] first, and loads the stored account and jetton balances before any network client
+         * is created. [databaseKey] must be exactly 32 bytes and [walletId] non-blank, without a path
+         * separator or a reserved migration name, otherwise [IllegalArgumentException] is thrown before
+         * any I/O.
+         *
+         * Recovery: [DatabaseMigrationRequiredException] or [DatabaseMigrationInProgressException] mean
+         * [migrateDatabase] has to run; [DatabaseKeyMismatchException] keeps the database and is only
+         * recoverable through [clear] plus a new key, which loses the stored wallet data.
+         */
+        suspend fun getInstance(
             tonWallet: TonWallet,
             network: Network,
-            context: Context,
+            context: PlatformContext,
             walletId: String,
+            databaseKey: ByteArray,
             apiKeys: List<String> = emptyList(),
             eventListenerFactory: EventListener.Factory? = null,
         ): TonKit {
+            requireValidKitDatabase(walletId, network)
+            requireValidDatabaseKey(databaseKey)
             val address = tonWallet.address
 
-            val database = KitDatabase.getInstance(context, "${walletId}-${network.name}")
+            val database = tonKitNamespace.open {
+                KitDatabase.getInstance(context, kitDatabaseName(walletId, network), databaseKey)
+            }
+            val accountDao = database.accountDao()
+            val jettonDao = database.jettonDao()
+            val account = accountDao.getAccount(address)
+            val jettonBalances = jettonDao.getJettonBalances()
 
-            val okHttpClient = buildOkHttpClient(apiKeys, eventListenerFactory)
+            val logger = kitLogger(network)
+            val okHttpClient = buildOkHttpClient(logger, apiKeys, eventListenerFactory)
             val api = TonApi(network, okHttpClient)
             val transactionSigner = getTransactionSigner(api)
 
-            val accountManager = AccountManager(address, api, database.accountDao())
-            val jettonManager = JettonManager(address, api, database.jettonDao())
-            val eventManager = EventManager(address, api, database.eventDao())
+            val accountManager = AccountManager(address, api, accountDao, account, logger)
+            val jettonManager = JettonManager(address, api, jettonDao, jettonBalances, logger)
+            val eventManager = EventManager(address, api, database.eventDao(), logger)
             val rawMessageBroadcaster = RawMessageBroadcaster(api, database.rawMessageBroadcastDao())
 
             val transactionSender = when (tonWallet) {
@@ -320,7 +373,7 @@ class TonKit internal constructor(
                 is TonWallet.WatchOnly -> null
             }
 
-            val apiListener = TonApiListener(network, okHttpClient)
+            val apiListener = TonApiListener(network, okHttpClient, logger)
 
             return TonKit(
                 address,
@@ -335,8 +388,43 @@ class TonKit internal constructor(
             )
         }
 
+        /**
+         * Encrypts the wallet's existing plaintext database with [databaseKey] (exactly 32 bytes), keeping
+         * its data, and recovers an interrupted migration. Call it before [getInstance] for this [walletId]
+         * and [network], with the same key; it is idempotent and checks its arguments like [getInstance],
+         * before any I/O.
+         *
+         * Failures:
+         * - [DatabaseKeyMismatchException]: the database was encrypted with another key and is kept
+         *   unchanged; only [clear] plus a new key recovers, losing the stored wallet data;
+         * - [DatabaseMigrationConflictException]: another process migrates or clears it, so retry later;
+         * - [InsufficientDatabaseMigrationSpaceException]: free some space and retry, the plaintext
+         *   database is kept unchanged.
+         */
+        suspend fun migrateDatabase(
+            context: PlatformContext,
+            network: Network,
+            walletId: String,
+            databaseKey: ByteArray,
+        ): DatabaseMigrationResult {
+            requireValidKitDatabase(walletId, network)
+            requireValidDatabaseKey(databaseKey)
+            return tonKitNamespace.migrate(databaseFile(context, kitDatabaseName(walletId, network)), databaseKey)
+        }
+
+        /**
+         * Deletes the database of [walletId] on [network] together with any leftovers of an interrupted
+         * migration. Throws [IllegalArgumentException] for an invalid [walletId], before any I/O, and
+         * [DatabaseMigrationConflictException] while another process migrates or clears it; retry later.
+         * Stop the kit first.
+         */
+        suspend fun clear(context: PlatformContext, network: Network, walletId: String) {
+            requireValidKitDatabase(walletId, network)
+            tonKitNamespace.clear(databaseFile(context, kitDatabaseName(walletId, network)))
+        }
+
         fun getTonApi(network: Network, apiKeys: List<String> = emptyList()) =
-            TonApi(network, buildOkHttpClient(apiKeys))
+            TonApi(network, buildOkHttpClient(kitLogger(network), apiKeys))
 
         fun getTransactionSigner(api: TonApi) = TransactionSigner(api)
 

@@ -148,7 +148,7 @@ class RawMessageBroadcasterTest {
             }
         }
         assertEquals(0, api.sendCalls)
-        assertEquals(0, dao.records().size)
+        assertEquals(0, dao.stored().size)
     }
 
     @Test
@@ -175,7 +175,7 @@ class RawMessageBroadcasterTest {
             }
         }
         assertEquals(1, api.sendCalls)
-        assertEquals(0, dao.records().size)
+        assertEquals(0, dao.stored().size)
     }
 
     @Test
@@ -190,7 +190,7 @@ class RawMessageBroadcasterTest {
         )
         val dao = InMemoryRawMessageBroadcastDao()
         val broadcaster = broadcaster(api, dao, networkTimeoutMillis = 60_000)
-        dao.insert(record(validUntil = 200))
+        runBlocking { dao.insert(record(validUntil = 200)) }
 
         assertThrows(TimeoutCancellationException::class.java) {
             runBlocking {
@@ -207,7 +207,7 @@ class RawMessageBroadcasterTest {
             }
         }
         assertEquals(1, api.sendCalls)
-        assertEquals(1, dao.records().size)
+        assertEquals(1, dao.stored().size)
     }
 
     @Test
@@ -253,7 +253,7 @@ class RawMessageBroadcasterTest {
             }
         }
         assertEquals(1, api.sendCalls)
-        assertEquals(0, dao.records().size)
+        assertEquals(0, dao.stored().size)
     }
 
     @Test
@@ -269,7 +269,7 @@ class RawMessageBroadcasterTest {
                 )
             }
         }
-        assertEquals(0, dao.records().size)
+        assertEquals(0, dao.stored().size)
     }
 
     @Test
@@ -390,19 +390,21 @@ class RawMessageBroadcasterTest {
     private class InMemoryRawMessageBroadcastDao : RawMessageBroadcastDao {
         private val records = linkedMapOf<String, RawMessageBroadcastRecord>()
 
-        override fun insert(record: RawMessageBroadcastRecord): Long {
+        override suspend fun insert(record: RawMessageBroadcastRecord): Long {
             if (records.containsKey(record.messageHash)) return -1
             records[record.messageHash] = record
             return 1
         }
 
-        override fun records(): List<RawMessageBroadcastRecord> = records.values.toList()
+        fun stored(): List<RawMessageBroadcastRecord> = records.values.toList()
 
-        override fun delete(messageHash: String) {
+        override suspend fun records(): List<RawMessageBroadcastRecord> = stored()
+
+        override suspend fun delete(messageHash: String) {
             records.remove(messageHash)
         }
 
-        override fun updateRetry(messageHash: String, retriesCount: Int, lastSendTime: Long) {
+        override suspend fun updateRetry(messageHash: String, retriesCount: Int, lastSendTime: Long) {
             val record = records[messageHash] ?: return
             records[messageHash] = record.copy(
                 retriesCount = retriesCount,

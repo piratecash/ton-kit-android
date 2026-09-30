@@ -1,5 +1,6 @@
 package io.horizontalsystems.tonkit.core
 
+import co.touchlab.kermit.Logger
 import okhttp3.Call
 import okhttp3.EventListener
 import okhttp3.Request
@@ -17,16 +18,18 @@ class TonKitForwardingTest {
         override fun create(call: Call): EventListener = EventListener.NONE
     }
 
+    private val logger = Logger.withTag("TonKitForwardingTest")
+
     @Test
     fun buildOkHttpClient_withFactory_attachesIt() {
-        val client = TonKit.buildOkHttpClient(emptyList(), recordingFactory)
+        val client = TonKit.buildOkHttpClient(logger, emptyList(), recordingFactory)
 
         assertSame(recordingFactory, client.eventListenerFactory)
     }
 
     @Test
     fun buildOkHttpClient_withoutFactory_installsNoObserver() {
-        val client = TonKit.buildOkHttpClient(emptyList(), null)
+        val client = TonKit.buildOkHttpClient(logger, emptyList(), null)
 
         val call = client.newCall(Request.Builder().url("https://tonapi.io").build())
         assertSame(EventListener.NONE, client.eventListenerFactory.create(call))

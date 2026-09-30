@@ -1,11 +1,12 @@
 package io.horizontalsystems.tonkit.api
 
+import co.touchlab.kermit.Logger
 import okhttp3.Interceptor
 import okhttp3.Request
 import okhttp3.Response
-import timber.log.Timber
 
 class AnonymousRateLimitInterceptor(
+    private val logger: Logger,
     private val sleeper: RateLimitInterceptor.Sleeper = RateLimitInterceptor.Sleeper { Thread.sleep(it) },
 ) : Interceptor {
 
@@ -43,19 +44,18 @@ class AnonymousRateLimitInterceptor(
             .joinToString { (name, value) -> "$name=$value" }
         val action = if (willRetry) "retry in ${retryAfterMs}ms" else "return 429"
 
-        Timber.tag(TAG).w(
-            "Anonymous TonAPI 429: %s %s, attempt=%d/%d, action=%s, headers=[%s]",
-            request.method, request.url.host, attempt, MAX_RETRIES, action, headers
-        )
+        logger.w {
+            "Anonymous TonAPI 429: ${request.method} ${request.url.host}, " +
+                "attempt=$attempt/$MAX_RETRIES, action=$action, headers=[$headers]"
+        }
     }
 
     companion object {
-        private const val TAG = "TonApiRateLimit"
         private const val MAX_RETRIES = 6
         private const val RATE_LIMIT_PREFIX = "X-RateLimit-"
 
         // Allowlist prevents accidental leakage of Set-Cookie, Authorization,
-        // proxy-auth and other sensitive headers if a consumer plants a release Tree.
+        // proxy-auth and other sensitive headers if a consumer installs a release log writer.
         private val LOGGABLE_HEADERS: Set<String> = sortedSetOf(
             String.CASE_INSENSITIVE_ORDER,
             "Retry-After", "CF-RAY", "Date", "Content-Type"

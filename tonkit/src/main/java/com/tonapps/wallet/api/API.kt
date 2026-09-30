@@ -1,5 +1,6 @@
 package com.tonapps.wallet.api
 
+import co.touchlab.kermit.Logger
 import com.tonapps.network.SSEvent
 import com.tonapps.network.post
 import com.tonapps.network.sse
@@ -9,11 +10,11 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class API(
+    private val logger: Logger,
     bridgeUrl: String = BRIDGE_URL,
     private val tonAPIHttpClient: OkHttpClient = createTonAPIHttpClient()
 ) {
@@ -220,7 +221,7 @@ class API(
         if (lastEventId != null) {
             url += "&last_event_id=$lastEventId"
         }
-        return tonAPIHttpClient.sse(url, onConnected)
+        return tonAPIHttpClient.sse(url, logger, onConnected)
     }
 
 //    fun tonconnectPayload(): String? {
@@ -255,12 +256,12 @@ class API(
             tonAPIHttpClient.post(url, body.toRequestBody(mimeType)).use { response ->
                 val successful = response.isSuccessful
                 if (!successful) {
-                    Timber.w("Failed sending TonConnect event: HTTP ${response.code}")
+                    logger.w { "Failed sending TonConnect event: HTTP ${response.code}" }
                 }
                 successful
             }
         } catch (e: IOException) {
-            Timber.w(e, "Failed sending TonConnect event")
+            logger.w { "Failed sending TonConnect event: ${e::class.simpleName}" }
             false
         }
     }

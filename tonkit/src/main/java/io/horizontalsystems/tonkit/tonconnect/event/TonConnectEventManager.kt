@@ -1,7 +1,6 @@
 package io.horizontalsystems.tonkit.tonconnect.event
 
-import android.util.Base64
-import android.util.Log
+import co.touchlab.kermit.Logger
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.network.SSEvent
 import com.tonapps.wallet.api.API
@@ -10,29 +9,34 @@ import com.tonapps.wallet.data.tonconnect.entities.reply.DAppErrorEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppReply
 import io.horizontalsystems.tonkit.tonconnect.DAppManager
 import io.horizontalsystems.tonkit.tonconnect.LocalStorage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.retry
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
-import timber.log.Timber
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.encoding.Base64
 
 class TonConnectEventManager(
     private val dAppManager: DAppManager,
     private val api: API,
     private val localStorage: LocalStorage,
+    private val logger: Logger,
 ) {
     private val coroutineExceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        Timber.w(throwable, "TonConnect event processing failed")
+        // Parser messages embed the decrypted request, so only the exception class is logged.
+        logger.w { "TonConnect event processing failed: ${throwable::class.simpleName}" }
     }
     private val coroutineScope = CoroutineScope(
         SupervisorJob() + Dispatchers.Default + coroutineExceptionHandler
@@ -99,26 +103,34 @@ class TonConnectEventManager(
         } != null
     }
 
-    private fun processEventSafely(dApps: List<DAppEntity>, ssEvent: SSEvent) {
+    private suspend fun processEventSafely(dApps: List<DAppEntity>, ssEvent: SSEvent) {
         try {
             processEvent(dApps, ssEvent)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Timber.w(e, "Failed processing TonConnect event")
+            logger.w { "Failed processing TonConnect event ${ssEvent.id}: ${e::class.simpleName}" }
         }
     }
 
-    private fun processEvent(dApps: List<DAppEntity>, ssEvent: SSEvent) {
+    private suspend fun processEvent(dApps: List<DAppEntity>, ssEvent: SSEvent) {
         val ssEventId = ssEvent.id ?: return
         if (receivedEventIds.contains(ssEventId)) return
 
         receivedEventIds.add(ssEventId)
-        localStorage.setLastSSEventId(ssEventId)
+        // A restarted subscription resumes after the stored cursor, so a committed event must still be dispatched.
+        withContext(NonCancellable) {
+            localStorage.setLastSSEventId(ssEventId)
+            dispatchEvent(dApps, ssEvent)
+        }
+    }
 
+    private fun dispatchEvent(dApps: List<DAppEntity>, ssEvent: SSEvent) {
         val from = ssEvent.json.getString("from")
         val dApp = dApps.find { it.clientId == from } ?: return
 
         val message = ssEvent.json.getString("message")
-        val body = Base64.decode(message, Base64.DEFAULT)
+        val body = bridgeBase64.decode(message)
         val jsonObject = JSONObject(dApp.decrypt(body).toString(Charsets.UTF_8))
 
         val method = jsonObject.getString("method")
@@ -131,7 +143,7 @@ class TonConnectEventManager(
             if (handler != null) {
                 handler.handle(requestId, params, dApp)
             } else {
-                Log.w("TonConnectEventManager", "No handler registered for method $method")
+                logger.w { "No handler registered for the requested method" }
                 responseToDApp(dApp, DAppErrorEntity.methodNotSupported(requestId))
             }
 
@@ -152,3 +164,6 @@ class TonConnectEventManager(
         }
     }
 }
+
+// Lenient like android.util.Base64.DEFAULT: skips line breaks and non-alphabet chars, padding optional.
+private val bridgeBase64 = Base64.Mime.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)

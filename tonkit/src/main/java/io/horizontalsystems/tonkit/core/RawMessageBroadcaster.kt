@@ -144,7 +144,7 @@ internal class RawMessageBroadcaster(
         }
     }
 
-    private fun handleBroadcastError(
+    private suspend fun handleBroadcastError(
         error: Throwable,
         decoded: DecodedRawMessage,
         metadata: EffectiveMetadata?,
@@ -167,7 +167,7 @@ internal class RawMessageBroadcaster(
         return RawMessageBroadcastResult(decoded.messageHash, RawMessageBroadcastStatus.Queued)
     }
 
-    private fun handleRetryError(error: Throwable, record: RawMessageBroadcastRecord) {
+    private suspend fun handleRetryError(error: Throwable, record: RawMessageBroadcastRecord) {
         if (error.isKnownSubmitted() || error.isPermanent() || record.validUntil <= nowProvider()) {
             dao.delete(record.messageHash)
             return
@@ -180,7 +180,7 @@ internal class RawMessageBroadcaster(
         )
     }
 
-    private fun enqueue(decoded: DecodedRawMessage, metadata: EffectiveMetadata) {
+    private suspend fun enqueue(decoded: DecodedRawMessage, metadata: EffectiveMetadata) {
         val now = nowProvider()
         dao.insert(
             RawMessageBroadcastRecord(

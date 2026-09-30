@@ -1,10 +1,8 @@
 package com.tonapps.wallet.data.core.entity
 
-import android.os.Parcelable
 import com.tonapps.blockchain.ton.extensions.isBounceable
 import com.tonapps.blockchain.ton.extensions.safeParseCell
 import com.tonapps.blockchain.ton.extensions.toTlb
-import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 import org.ton.block.AddrStd
 import org.ton.block.Coins
@@ -15,13 +13,12 @@ import org.ton.contract.wallet.WalletTransfer
 import org.ton.contract.wallet.WalletTransferBuilder
 import org.ton.tlb.CellRef
 
-@Parcelize
 data class RawMessageEntity(
     val addressValue: String,
     val amount: Long,
     val stateInitValue: String?,
     val payloadValue: String
-): Parcelable {
+) {
 
     val address: AddrStd
         get() = AddrStd.parse(addressValue)

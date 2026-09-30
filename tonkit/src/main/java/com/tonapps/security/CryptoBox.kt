@@ -1,15 +1,13 @@
 package com.tonapps.security
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
+import io.horizontalsystems.tonkit.tweetnacl.TweetNaclFast.Box
 
 object CryptoBox {
 
-    @Parcelize
     data class KeyPair(
         val publicKey: ByteArray,
         val privateKey: ByteArray
-    ): Parcelable {
+    ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -29,14 +27,22 @@ object CryptoBox {
         }
     }
 
-    fun nonce(): ByteArray {
-        return Security.randomBytes(Sodium.cryptoBoxNonceBytes())
+    fun keyPair(): KeyPair {
+        val keyPair = Box.keyPair()
+        return KeyPair(keyPair.publicKey, keyPair.secretKey)
     }
 
-    fun keyPair(): KeyPair {
-        val publicKey = ByteArray(32)
-        val privateKey = ByteArray(32)
-        Sodium.cryptoBoxKeyPair(publicKey, privateKey)
-        return KeyPair(publicKey, privateKey)
+    /** Returns nonce ‖ MAC ‖ ciphertext, the TON Connect bridge layout of `crypto_box_easy`. */
+    fun encrypt(message: ByteArray, remotePublicKey: ByteArray, localPrivateKey: ByteArray): ByteArray {
+        val nonce = Security.randomBytes(Box.nonceLength)
+        return nonce + Box(remotePublicKey, localPrivateKey).box(message, nonce)
+    }
+
+    fun decrypt(body: ByteArray, remotePublicKey: ByteArray, localPrivateKey: ByteArray): ByteArray {
+        val nonce = body.sliceArray(0 until Box.nonceLength)
+        val cipher = body.sliceArray(Box.nonceLength until body.size)
+        // On auth failure the libsodium binding returned its untouched zeroed buffer; keep that.
+        return Box(remotePublicKey, localPrivateKey).open(cipher, nonce)
+            ?: ByteArray(cipher.size - Box.overheadLength)
     }
 }

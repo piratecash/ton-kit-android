@@ -1,5 +1,6 @@
 package com.tonapps.wallet.api
 
+import co.touchlab.kermit.Logger
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -28,6 +29,7 @@ class APITonConnectSendTest {
 
     private fun createApi(client: OkHttpClient = OkHttpClient()): API =
         API(
+            logger = Logger.withTag("APITonConnectSendTest"),
             bridgeUrl = server.url("/bridge").toString(),
             tonAPIHttpClient = client
         )

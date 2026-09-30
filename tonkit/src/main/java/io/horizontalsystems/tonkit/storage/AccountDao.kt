@@ -11,8 +11,8 @@ import io.horizontalsystems.tonkit.models.Account
 interface AccountDao {
 
     @Query("SELECT * FROM Account WHERE address = :address")
-    fun getAccount(address: Address) : Account?
+    suspend fun getAccount(address: Address) : Account?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun save(account: Account)
+    suspend fun save(account: Account)
 }

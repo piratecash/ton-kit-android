@@ -1,12 +1,12 @@
 package io.horizontalsystems.tonkit.storage
 
-import android.content.Context
 import androidx.room.Database
 import androidx.room.migration.Migration
-import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
+import io.horizontalsystems.tonkit.PlatformContext
 import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.EventSyncState
@@ -23,6 +23,7 @@ import io.horizontalsystems.tonkit.models.Tag
         RawMessageBroadcastRecord::class,
     ],
     version = 2,
+    exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class KitDatabase : RoomDatabase() {
@@ -32,9 +33,9 @@ abstract class KitDatabase : RoomDatabase() {
     abstract fun rawMessageBroadcastDao(): RawMessageBroadcastDao
 
     companion object {
-        private val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
+        internal val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS RawMessageBroadcastRecord (
                         messageHash TEXT NOT NULL,
@@ -52,12 +53,12 @@ abstract class KitDatabase : RoomDatabase() {
             }
         }
 
-        fun getInstance(context: Context, name: String): KitDatabase {
-            return Room
-                .databaseBuilder(context, KitDatabase::class.java, name)
-                .addMigrations(MIGRATION_1_2)
-                .allowMainThreadQueries()
-                .build()
+        internal fun getInstance(context: PlatformContext, name: String, databaseKey: ByteArray): KitDatabase {
+            return kitDatabaseBuilder(context, name, databaseKey).kitSchemaPolicy().build()
         }
     }
 }
+
+internal fun RoomDatabase.Builder<KitDatabase>.kitSchemaPolicy(): RoomDatabase.Builder<KitDatabase> =
+    addMigrations(KitDatabase.MIGRATION_1_2)
+        .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = false)
