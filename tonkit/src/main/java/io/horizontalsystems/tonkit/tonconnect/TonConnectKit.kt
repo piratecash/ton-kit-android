@@ -36,6 +36,7 @@ import io.horizontalsystems.tonkit.storage.tonConnectNamespace
 import io.horizontalsystems.tonkit.tonconnect.event.EventHandlerSendTransaction
 import io.horizontalsystems.tonkit.tonconnect.event.TonConnectEventManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -77,11 +78,14 @@ class TonConnectKit(
                 return json
             }
         }
-        // Older versions stored keys the bridge cannot encrypt to; such a session is only removed locally.
-        if (DAppRequestEntity.isValidClientId(dAppEntity.clientId)) {
-            tonConnectEventManager.responseToDApp(dAppEntity, disconnect)
+        // Once the dApp is notified the local removal must follow, even if the caller is cancelled meanwhile.
+        withContext(NonCancellable) {
+            // Older versions stored keys the bridge cannot encrypt to; such a session is only removed locally.
+            if (DAppRequestEntity.isValidClientId(dAppEntity.clientId)) {
+                tonConnectEventManager.responseToDApp(dAppEntity, disconnect)
+            }
+            dAppManager.remove(dAppEntity)
         }
-        dAppManager.remove(dAppEntity)
     }
 
     suspend fun connect(
