@@ -5,6 +5,7 @@ import io.horizontalsystems.tonkit.tweetnacl.TweetNaclFast.Box
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 // Vectors from NaCl/libsodium test/default/box.c, box2.c and box.exp.
@@ -90,6 +91,23 @@ class CryptoBoxTest {
     }
 
     @Test
+    fun encrypt_lowOrderRemoteKey_throws() {
+        LOW_ORDER_KEYS.forEach { key ->
+            assertThrows(IllegalArgumentException::class.java) { CryptoBox.encrypt(MESSAGE, key, ALICE_SK) }
+        }
+    }
+
+    @Test
+    fun decrypt_lowOrderRemoteKey_returnsZeroedBuffer() {
+        LOW_ORDER_KEYS.forEach { key ->
+            // Any secret key yields the same all-zero shared point, so an attacker can forge this box.
+            val forged = NONCE + Box(key, ALICE_SK).box(MESSAGE, NONCE)
+
+            assertArrayEquals(ByteArray(MESSAGE.size), CryptoBox.decrypt(forged, key, BOB_SK))
+        }
+    }
+
+    @Test
     fun dAppEntity_bridgeRoundTrip_interoperatesWithDAppKeys() {
         // The wallet holds bob's key pair; the dApp (clientId) is alice.
         val dApp = TonV2Fixture.dApps()[1].copy(clientId = hex(ALICE_PK))
@@ -107,6 +125,11 @@ class CryptoBoxTest {
         val BOB_SK = "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb".hex()
         val BOB_PK = "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f".hex()
         val NONCE = "69696ee955b62b73cd62bda875fc73d68219e0036b7a0b37".hex()
+        val LOW_ORDER_KEYS = listOf(
+            ByteArray(32),
+            ByteArray(32).apply { this[0] = 1 },
+            "e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800".hex(),
+        )
         val MESSAGE = (
             "be075fc53c81f2d5cf141316ebeb0c7b5228c52a4c62cbd44b66849b64244ffce5ecbaaf33bd751a1ac728d45e6c6129" +
                 "6cdc3c01233561f41db66cce314adb310e3be8250c46f06dceea3a7fa1348057e2f6556ad6b1318a024a838f21af1fde" +
