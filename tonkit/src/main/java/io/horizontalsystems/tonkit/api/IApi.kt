@@ -23,4 +23,5 @@ interface IApi {
     suspend fun estimateFee(boc: String, params: List<EmulateMessageToWalletRequestParamsInner>?): BigInteger
     suspend fun send(boc: String)
     suspend fun getAccountSeqno(address: String): Int
+    suspend fun transactionExistsByMessageHash(messageHash: String): Boolean
 }

@@ -1,7 +1,5 @@
 package com.tonapps.icu
 
-import android.os.Parcel
-import android.os.Parcelable
 import java.math.BigDecimal
 import java.math.BigInteger
 import java.math.RoundingMode
@@ -9,15 +7,9 @@ import java.math.RoundingMode
 data class Coins(
     val value: BigDecimal,
     val decimals: Int = DEFAULT_DECIMALS,
-): Parcelable, Comparable<Coins> {
+): Comparable<Coins> {
 
     companion object {
-
-        @JvmField
-        val CREATOR = object : Parcelable.Creator<Coins> {
-            override fun createFromParcel(parcel: Parcel) = Coins(parcel)
-            override fun newArray(size: Int): Array<Coins?> = arrayOfNulls(size)
-        }
 
         const val DEFAULT_DECIMALS = 9
 
@@ -113,16 +105,6 @@ data class Coins(
     val isPositive: Boolean
         get() = value > ZERO.value
 
-    constructor(parcel: Parcel) : this(
-        parcel.readSerializable() as BigDecimal,
-        parcel.readInt(),
-    )
-
-    override fun writeToParcel(parcel: Parcel, flags: Int) {
-        parcel.writeSerializable(value)
-        parcel.writeInt(decimals)
-    }
-
     operator fun plus(other: Coins) = of(value + other.value, decimals)
 
     operator fun minus(other: Coins) = of(value - other.value, decimals)
@@ -150,10 +132,4 @@ data class Coins(
     }
 
     fun toDouble(): Double = value.toDouble()
-
-    override fun describeContents(): Int {
-        return 0
-    }
-
-
 }

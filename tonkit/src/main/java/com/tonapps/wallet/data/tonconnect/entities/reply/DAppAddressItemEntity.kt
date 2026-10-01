@@ -4,7 +4,7 @@ import com.tonapps.blockchain.ton.TonNetwork
 import com.tonapps.blockchain.ton.extensions.bocBase64
 import com.tonapps.blockchain.ton.extensions.hex
 import org.json.JSONObject
-import org.ton.api.pub.PublicKeyEd25519
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import org.ton.block.StateInit
 
 data class DAppAddressItemEntity(

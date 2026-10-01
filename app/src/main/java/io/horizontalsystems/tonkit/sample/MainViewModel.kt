@@ -111,7 +111,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stop() {
-        tonKit.stop()
+        viewModelScope.launch {
+            tonKit.stop()
+        }
     }
 }
 

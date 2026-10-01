@@ -25,20 +25,22 @@ data class Tag(
         Unsupported;
     }
 
+    // Null fields in `tagQuery` act as wildcards, matching the SQL filtering
+    // performed by `EventDao.events` (it skips WHERE clauses for null fields).
     fun conforms(tagQuery: TagQuery): Boolean {
-        if (tagQuery.type != type) {
+        if (tagQuery.type != null && tagQuery.type != type) {
             return false
         }
 
-        if (tagQuery.platform != platform) {
+        if (tagQuery.platform != null && tagQuery.platform != platform) {
             return false
         }
 
-        if (tagQuery.jettonAddress != jettonAddress) {
+        if (tagQuery.jettonAddress != null && tagQuery.jettonAddress != jettonAddress) {
             return false
         }
 
-        if (!addresses.contains(tagQuery.address)) {
+        if (tagQuery.address != null && !addresses.contains(tagQuery.address)) {
             return false
         }
 

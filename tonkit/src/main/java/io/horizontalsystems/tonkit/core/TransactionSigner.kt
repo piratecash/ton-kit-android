@@ -9,7 +9,7 @@ import com.tonapps.wallet.data.account.entities.WalletEntity
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.models.Event
-import org.ton.api.pk.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PrivateKeyEd25519
 import org.ton.cell.Cell
 import org.ton.contract.wallet.WalletTransfer
 import kotlin.math.min
@@ -17,12 +17,13 @@ import kotlin.math.min
 class TransactionSigner(private val api: TonApi) {
 
     suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet.FullAccess): Event {
-        val publicKey = tonWallet.privateKey.publicKey()
+        val publicKey = tonWallet.publicKeyEd25519
         val walletEntity = WalletEntity(
             id = "id",
             publicKey = publicKey,
             type = Wallet.Type.Default,
             version = WalletVersion.V4R2,
+            hashSigner = tonWallet.hashSigner,
             label = Wallet.Label("", "", 0)
         )
 
@@ -30,12 +31,12 @@ class TransactionSigner(private val api: TonApi) {
     }
 
     suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet.FullAccess): String {
-        val privateKey = tonWallet.privateKey
         val walletEntity = WalletEntity(
             id = "id",
-            publicKey = privateKey.publicKey(),
+            publicKey = tonWallet.publicKeyEd25519,
             type = Wallet.Type.Default,
             version = WalletVersion.V4R2,
+            hashSigner = tonWallet.hashSigner,
             label = Wallet.Label("", "", 0)
         )
 
@@ -43,9 +44,9 @@ class TransactionSigner(private val api: TonApi) {
         val message = createSignedMessage(
             walletEntity,
             seqno,
-            privateKey,
             getSafeValidUntil(request.validUntil),
-            request.transfers
+            request.transfers,
+            false
         )
         return message.base64()
     }
@@ -55,9 +56,9 @@ class TransactionSigner(private val api: TonApi) {
         val cell = createSignedMessage(
             wallet,
             seqno,
-            EmptyPrivateKeyEd25519,
             getSafeValidUntil(request.validUntil),
-            request.transfers
+            request.transfers,
+            true
         )
 
         val emulated = api.emulate(cell, wallet.testnet)
@@ -67,12 +68,12 @@ class TransactionSigner(private val api: TonApi) {
     private fun createSignedMessage(
         wallet: WalletEntity,
         seqno: Int,
-        privateKeyEd25519: PrivateKeyEd25519,
         validUntil: Long,
         transfers: List<WalletTransfer>,
+        useEmptySigner: Boolean
     ): Cell {
         val data = messageBody(wallet, seqno, validUntil, transfers)
-        return wallet.sign(privateKeyEd25519, data.seqno, data.body)
+        return wallet.sign(data.seqno, data.body, useEmptySigner)
     }
 
     private fun messageBody(

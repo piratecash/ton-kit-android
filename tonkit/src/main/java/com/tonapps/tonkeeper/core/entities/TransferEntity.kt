@@ -1,10 +1,10 @@
 package com.tonapps.tonkeeper.core.entities
 
-import android.util.Log
 import com.tonapps.blockchain.ton.TonSendMode
 import com.tonapps.blockchain.ton.TonTransferHelper
 import com.tonapps.blockchain.ton.contract.BaseWalletContract
 import com.tonapps.extensions.toByteArray
+import com.tonapps.blockchain.ton.extensions.sign
 import com.tonapps.icu.Coins
 import com.tonapps.ledger.ton.TonPayloadFormat
 import com.tonapps.ledger.ton.Transaction
@@ -13,13 +13,15 @@ import com.tonapps.security.Security
 import com.tonapps.security.hex
 import com.tonapps.wallet.api.entity.BalanceEntity
 import com.tonapps.wallet.data.account.entities.WalletEntity
-import org.ton.api.pk.PrivateKeyEd25519
+import org.ton.kotlin.crypto.PrivateKeyEd25519
 import org.ton.bitstring.BitString
 import org.ton.block.AddrStd
 import org.ton.block.StateInit
 import org.ton.cell.Cell
+import org.ton.contract.wallet.MessageData
 import org.ton.contract.wallet.WalletTransfer
 import org.ton.contract.wallet.WalletTransferBuilder
+import org.ton.tlb.CellRef
 import java.math.BigInteger
 
 data class TransferEntity(
@@ -54,7 +56,6 @@ data class TransferEntity(
 
     private val coins: org.ton.block.Coins
         get() {
-            Log.d("TransferEntityLog", "amount: $amount; long: ${amount.toLong()}")
             return org.ton.block.Coins.ofNano(amount.toLong())
         }
 
@@ -62,8 +63,10 @@ data class TransferEntity(
     private val gift: WalletTransfer by lazy {
         val builder = WalletTransferBuilder()
         builder.bounceable = bounceable
-        builder.body = body()
         builder.sendMode = sendMode
+        val messageBody = body() ?: Cell.empty()
+        val stateInitRef = stateInit?.let { CellRef(it, StateInit) }
+        builder.messageData = MessageData.raw(messageBody, stateInitRef)
         if (isNft) {
             builder.coins = coins
             builder.destination = AddrStd.parse(nftAddress!!)
@@ -74,7 +77,6 @@ data class TransferEntity(
             builder.coins = coins
             builder.destination = destination
         }
-        builder.stateInit = stateInit
         builder.build()
     }
 
@@ -179,10 +181,10 @@ data class TransferEntity(
         )
     }
 
-    fun toSignedMessage(privateKeyEd25519: PrivateKeyEd25519): Cell {
-        return contract.createTransferMessageCell(
+    fun toSignedMessage(useEmptySigner: Boolean): Cell {
+        return contract.createTransferMessageCellFromUnsignedBody(
             address = contract.address,
-            privateKey = privateKeyEd25519,
+            useEmptySigner = useEmptySigner,
             seqno = seqno,
             unsignedBody = unsignedBody,
         )

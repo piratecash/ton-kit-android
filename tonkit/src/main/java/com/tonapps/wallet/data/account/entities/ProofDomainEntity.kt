@@ -15,6 +15,7 @@ data class ProofDomainEntity(
     fun toJSON(): JSONObject {
         val json = JSONObject()
         json.put("lengthBytes", lengthBytes)
+        json.put("length_bytes", lengthBytes)
         json.put("value", value)
         return json
     }

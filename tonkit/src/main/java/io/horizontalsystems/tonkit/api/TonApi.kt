@@ -20,6 +20,7 @@ import io.tonapi.models.EmulateMessageToWalletRequest
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
 import io.tonapi.models.MessageConsequences
 import io.tonapi.models.SendBlockchainMessageRequest
+import io.tonapi.infrastructure.ClientException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -39,20 +40,20 @@ class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
     val emulationApi = EmulationApi(basePath, okHttpClient)
     private val blockchainApi = BlockchainApi(basePath, okHttpClient)
 
-    override suspend fun getAccount(address: Address): Account {
+    override suspend fun getAccount(address: Address): Account = withContext(Dispatchers.IO) {
         val account = accountsApi.getAccount(address.toRaw())
 
-        return Account(
+        Account(
             Address.parse(account.address),
             account.balance,
             AccountStatus.fromApi(account.status),
         )
     }
 
-    override suspend fun getAccountJettonBalances(address: Address): List<JettonBalance> {
+    override suspend fun getAccountJettonBalances(address: Address): List<JettonBalance> = withContext(Dispatchers.IO) {
         val jettonsBalances = accountsApi.getAccountJettonsBalances(address.toRaw())
 
-        return jettonsBalances.balances.map { balance ->
+        jettonsBalances.balances.map { balance ->
             JettonBalance(
                 Jetton.fromPreview(balance.jetton),
                 BigInteger(balance.balance),
@@ -66,7 +67,7 @@ class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
         beforeLt: Long?,
         startTimestamp: Long?,
         limit: Int,
-    ): List<Event> {
+    ): List<Event> = withContext(Dispatchers.IO) {
         val events = accountsApi.getAccountEvents(
             accountId = address.toRaw(),
             limit = limit,
@@ -74,38 +75,51 @@ class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
             startDate = startTimestamp
         )
 
-        return events.events.map(Event.Companion::fromApi)
+        events.events.map(Event.Companion::fromApi)
     }
 
     override suspend fun getAccountSeqno(address: Address): Int {
         return getAccountSeqno(address.toRaw())
     }
 
-    override suspend fun getAccountSeqno(address: String): Int {
-        return walletApi.getAccountSeqno(address).seqno
+    override suspend fun getAccountSeqno(address: String): Int = withContext(Dispatchers.IO) {
+        walletApi.getAccountSeqno(address).seqno
     }
 
-    override suspend fun getJettonInfo(address: Address): Jetton {
+    override suspend fun getJettonInfo(address: Address): Jetton = withContext(Dispatchers.IO) {
         val jettonInfo = jettonsApi.getJettonInfo(address.toRaw())
-        return Jetton.fromJettonInfo(jettonInfo)
+        Jetton.fromJettonInfo(jettonInfo)
     }
 
-    override suspend fun getRawTime(): Int {
-        return liteServerApi.getRawTime().time
+    override suspend fun getRawTime(): Int = withContext(Dispatchers.IO) {
+        liteServerApi.getRawTime().time
     }
 
     override suspend fun estimateFee(
         boc: String,
         params: List<EmulateMessageToWalletRequestParamsInner>?
-    ): BigInteger {
+    ): BigInteger = withContext(Dispatchers.IO) {
         val request = EmulateMessageToWalletRequest(boc, params)
         val result = emulationApi.emulateMessageToWallet(request)
-        return BigInteger.valueOf(result.trace.transaction.totalFees)
+        BigInteger.valueOf(result.trace.transaction.totalFees)
     }
 
-    override suspend fun send(boc: String) {
+    override suspend fun send(boc: String): Unit = withContext(Dispatchers.IO) {
         val request = SendBlockchainMessageRequest(boc)
         blockchainApi.sendBlockchainMessage(request)
+    }
+
+    override suspend fun transactionExistsByMessageHash(messageHash: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            blockchainApi.getBlockchainTransactionByMessageHash(messageHash)
+            true
+        } catch (error: ClientException) {
+            if (error.statusCode == 404) {
+                false
+            } else {
+                throw error
+            }
+        }
     }
 
     suspend fun emulate(
@@ -122,6 +136,5 @@ class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
     ): MessageConsequences {
         return emulate(cell.base64(), testnet)
     }
-
 
 }

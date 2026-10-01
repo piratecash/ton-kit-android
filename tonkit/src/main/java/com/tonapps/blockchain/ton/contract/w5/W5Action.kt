@@ -10,9 +10,7 @@ import org.ton.cell.CellBuilder
 import org.ton.cell.CellBuilder.Companion.beginCell
 import org.ton.cell.storeRef
 import org.ton.contract.wallet.WalletTransfer
-import org.ton.tlb.CellRef
 import org.ton.tlb.constructor.AnyTlbConstructor
-import org.ton.tlb.storeRef
 import org.ton.tlb.storeTlb
 
 sealed class W5Action(
@@ -40,13 +38,13 @@ sealed class W5Action(
             return actions.fold(beginCell().endCell()) { cell, action ->
                 beginCell()
                     .storeRef(cell)
-                    .storeRef(action.store())
+                    .storeRef(action.toCell())
                     .endCell()
             }
         }
 
         private fun packExtendedActionsRec(extendedActions: List<Out>): Cell {
-            var builder = beginCell().storeRef(extendedActions.first().store())
+            var builder = beginCell().storeRef(extendedActions.first().toCell())
             val rest = extendedActions.drop(1)
             if (rest.isNotEmpty()) {
                 builder = builder.storeRef(packExtendedActionsRec(rest))
@@ -78,7 +76,7 @@ sealed class W5Action(
             } else {
                 val rest = extendedActions.drop(1)
                 builder.storeUInt(1, 1)
-                builder.storeRef(extendedActions.first().store())
+                builder.storeRef(extendedActions.first().toCell())
                 if (rest.isNotEmpty()) {
                     builder.storeRef(packExtendedActionsRec(rest))
                 }
@@ -141,8 +139,9 @@ sealed class W5Action(
         override fun store(): (CellBuilder) -> Unit = { builder ->
             builder.storeUInt(0x0ec3c86d, 32)
             builder.storeUInt(message.sendMode, 8)
-            val intMsg = CellRef(createIntMsg(message))
-            builder.storeRef(MessageRelaxed.tlbCodec(AnyTlbConstructor), intMsg)
+            builder.storeRef {
+                storeTlb(MessageRelaxed.tlbCodec(AnyTlbConstructor), createIntMsg(message))
+            }
         }
     }
 
@@ -157,3 +156,5 @@ sealed class W5Action(
     }
 
 }
+
+private fun W5Action.Out.toCell(): Cell = CellBuilder.createCell(store())

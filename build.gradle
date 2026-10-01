@@ -1,9 +1,38 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.devtools.ksp) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.compose.compiler) apply false
+    alias(libs.plugins.androidx.room) apply false
+}
+
+// Jitpack sets these as env vars; local/CI publish runs may pass them as -P properties instead.
+def resolvePublicationProperty = { name ->
+    providers.environmentVariable(name).orElse(providers.gradleProperty(name))
+}
+
+ext.publicationVersion = resolvePublicationProperty('JITPACK_VERSION')
+    .orElse(resolvePublicationProperty('VERSION'))
+    .orElse(resolvePublicationProperty('VERSION_NAME'))
+    .orElse(provider { '0.0.0-SNAPSHOT' })
+    .get()
+
+subprojects {
+    tasks.withType(KotlinCompile).configureEach {
+        compilerOptions {
+            jvmDefault.set(JvmDefaultMode.DISABLE)
+        }
+    }
+
+    if (name in ['tonkit', 'tonkit-tweetnacl']) {
+        group = 'com.github.piratecash.ton-kit-android'
+        version = rootProject.ext.publicationVersion
+    }
 }

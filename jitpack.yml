@@ -1,2 +1,7 @@
 jdk:
-  - openjdk17
+  - openjdk21
+before_install:
+  - touch local.properties
+install:
+  - ./gradlew test --refresh-dependencies
+  - ./gradlew publishToMavenLocal

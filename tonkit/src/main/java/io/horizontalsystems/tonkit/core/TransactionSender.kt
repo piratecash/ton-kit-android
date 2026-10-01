@@ -1,156 +1,140 @@
 package io.horizontalsystems.tonkit.core
 
-import com.tonapps.blockchain.ton.contract.WalletVersion
-import com.tonapps.blockchain.ton.extensions.EmptyPrivateKeyEd25519
-import com.tonapps.blockchain.ton.extensions.base64
-import com.tonapps.icu.Coins
-import com.tonapps.tonkeeper.core.entities.TransferEntity
-import com.tonapps.wallet.api.entity.BalanceEntity
-import com.tonapps.wallet.data.account.Wallet
-import com.tonapps.wallet.data.account.entities.WalletEntity
+import com.tonapps.blockchain.ton.contract.HashSigner
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
+import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.api.TonApi
-import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
-import org.ton.api.pk.PrivateKeyEd25519
+import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import java.math.BigInteger
 
 class TransactionSender(
-    private val api: TonApi,
+    private val api: IApi,
     private val sender: Address,
-    private val privateKey: PrivateKeyEd25519,
+    hashSigner: HashSigner,
+    publicKeyEd25519: PublicKeyEd25519
 ) {
-    private suspend fun safeTimeout(ttl: Long = 5 * 60) = try {
-        val rawTime = api.getRawTime()
-        rawTime + ttl
-    } catch(e: Throwable) {
-        System.currentTimeMillis() / 1000 + ttl
-    }
+    // Binary-compatible with the original TonApi-typed constructor.
+    constructor(
+        api: TonApi,
+        sender: Address,
+        hashSigner: HashSigner,
+        publicKeyEd25519: PublicKeyEd25519
+    ) : this(api as IApi, sender, hashSigner, publicKeyEd25519)
 
-    suspend fun estimateFee(recipient: FriendlyAddress, amount: TonKit.SendAmount, comment: String?): BigInteger {
-        val value: BigInteger
-        val isMax: Boolean
+    private val rawTransactionBuilder = TonRawTransactionBuilder(api, sender, hashSigner, publicKeyEd25519)
 
-        when (amount) {
-            is TonKit.SendAmount.Amount -> {
-                value = amount.value
-                isMax = false
-            }
-            TonKit.SendAmount.Max -> {
-                value = BigInteger.ZERO
-                isMax = true
-            }
-        }
-
-        val transfer = getTonTransferEntity(
-            value,
-            isMax,
-            recipient,
-            comment,
-            sender.toRaw(),
-            true
-        )
-        val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
-        val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), 1_000_000_000))
-
-        return api.estimateFee(message.base64(), params)
-    }
-
-    private suspend fun getTonTransferEntity(
-        value: BigInteger,
-        isMax: Boolean,
+    suspend fun estimateFee(
         recipient: FriendlyAddress,
-        comment: String?,
-        walletAddress: String,
-        isTon: Boolean,
-    ): TransferEntity {
-        val seqno = api.getAccountSeqno(sender)
-        val timeout = safeTimeout()
-
-        val walletEntity = WalletEntity(
-            id = "id",
-            publicKey = privateKey.publicKey(),
-            type = Wallet.Type.Default,
-            version = WalletVersion.V4R2,
-            label = Wallet.Label("", "", 0),
-            ledger = null
+        amount: TonKit.SendAmount,
+        comment: String?
+    ): BigInteger {
+        return rawTransactionBuilder.estimateFee(
+            rawTransactionBuilder.tonTransfer(recipient, amount, comment)
         )
-
-        // Using Coins.DEFAULT_DECIMALS for jetton instead of its own decimals is ok.
-        // At the end amount will be converted to long using the same Coins.DEFAULT_DECIMALS
-        val transfer = TransferEntity.Builder(walletEntity)
-            .setSeqno(seqno)
-            .setAmount(Coins.of(value.toBigDecimal(Coins.DEFAULT_DECIMALS)))
-            .setMax(isMax)
-            .setDestination(recipient.addrStd)
-            .setBounceable(recipient.isBounceable)
-            .setComment(comment)
-            .setValidUntil(timeout)
-            .setToken(BalanceEntity(isTon, walletAddress))
-            .build()
-        return transfer
     }
 
-    suspend fun estimateFee(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?): BigInteger {
-        val transfer = getTonTransferEntity(
-            amount,
-            false,
-            recipient,
-            comment,
-            jettonWallet.toRaw(),
-            false
+    suspend fun estimateFee(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?
+    ): BigInteger {
+        return rawTransactionBuilder.estimateFee(
+            rawTransactionBuilder.jettonTransfer(jettonWallet, recipient, amount, comment)
         )
-        val message = transfer.toSignedMessage(EmptyPrivateKeyEd25519)
-        val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), 1_000_000_000))
-
-        return api.estimateFee(message.base64(), params)
-
     }
 
     suspend fun send(recipient: FriendlyAddress, amount: TonKit.SendAmount, comment: String?) {
-        val value: BigInteger
-        val isMax: Boolean
-
-        when (amount) {
-            is TonKit.SendAmount.Amount -> {
-                value = amount.value
-                isMax = false
-            }
-            TonKit.SendAmount.Max -> {
-                value = BigInteger.ZERO
-                isMax = true
-            }
-        }
-
-        val transfer = getTonTransferEntity(
-            value,
-            isMax,
-            recipient,
-            comment,
-            sender.toRaw(),
-            true
-        )
-        val message = transfer.toSignedMessage(privateKey)
-
-        api.send(message.base64())
+        val transfer = rawTransactionBuilder.tonTransfer(recipient, amount, comment)
+        api.send(rawTransactionBuilder.signedTransaction(transfer).bocBase64)
     }
 
-    suspend fun send(jettonWallet: Address, recipient: FriendlyAddress, amount: BigInteger, comment: String?) {
-        val transfer = getTonTransferEntity(
-            amount,
-            false,
-            recipient,
-            comment,
-            jettonWallet.toRaw(),
-            false
-        )
-        val message = transfer.toSignedMessage(privateKey)
-
-        api.send(message.base64())
+    suspend fun send(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?
+    ) {
+        val transfer = rawTransactionBuilder.jettonTransfer(jettonWallet, recipient, amount, comment)
+        api.send(rawTransactionBuilder.signedTransaction(transfer).bocBase64)
     }
+
+    suspend fun signedTonTransaction(
+        recipient: FriendlyAddress,
+        amount: TonKit.SendAmount,
+        comment: String?,
+    ): SignedRawTonTransaction {
+        val transfer = rawTransactionBuilder.tonTransfer(recipient, amount, comment)
+        return rawTransactionBuilder.signedTransaction(
+            transfer = transfer,
+            fee = rawTransactionBuilder.estimateFee(transfer),
+        )
+    }
+
+    suspend fun signedJettonTransaction(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?,
+    ): SignedRawTonTransaction {
+        val transfer = rawTransactionBuilder.jettonTransfer(jettonWallet, recipient, amount, comment)
+        return rawTransactionBuilder.signedTransaction(
+            transfer = transfer,
+            fee = rawTransactionBuilder.estimateFee(transfer),
+        )
+    }
+
+    /**
+     * Builds and signs a TON transfer fully offline: no network call is made.
+     *
+     * [seqno] and [validUntil] must come from an anchor captured while online.
+     * [fee] is display-only — it is echoed into the result and is not part of
+     * the signed message.
+     *
+     * Offline signing is forbidden for an undeployed wallet (seqno == 0): the
+     * V4R2 contract writes 32 one-bits instead of validUntil for the deploy
+     * transaction, so the signed message would never expire while the result
+     * reported the requested validUntil. Send the first transaction online.
+     */
+    suspend fun signedTonTransaction(
+        recipient: FriendlyAddress,
+        amount: TonKit.SendAmount,
+        comment: String?,
+        seqno: Int,
+        validUntil: Long,
+        fee: BigInteger,
+    ): SignedRawTonTransaction {
+        require(seqno > 0) { "Offline signing requires a deployed wallet (seqno > 0)" }
+        val transfer = rawTransactionBuilder.tonTransfer(recipient, amount, comment, seqno, validUntil)
+        return rawTransactionBuilder.signedTransaction(transfer, fee)
+    }
+
+    /**
+     * Builds and signs a jetton transfer fully offline: no network call is made.
+     * See the TON overload above for the [seqno]/[validUntil]/[fee] contract.
+     */
+    suspend fun signedJettonTransaction(
+        jettonWallet: Address,
+        recipient: FriendlyAddress,
+        amount: BigInteger,
+        comment: String?,
+        seqno: Int,
+        validUntil: Long,
+        fee: BigInteger,
+    ): SignedRawTonTransaction {
+        require(seqno > 0) { "Offline signing requires a deployed wallet (seqno > 0)" }
+        val transfer =
+            rawTransactionBuilder.jettonTransfer(jettonWallet, recipient, amount, comment, seqno, validUntil)
+        return rawTransactionBuilder.signedTransaction(transfer, fee)
+    }
+
+    suspend fun getAccountSeqno(): Int = api.getAccountSeqno(sender)
+
+    suspend fun getRawTime(): Int = api.getRawTime()
 
     suspend fun send(boc: String) {
         api.send(boc)
-
     }
 }

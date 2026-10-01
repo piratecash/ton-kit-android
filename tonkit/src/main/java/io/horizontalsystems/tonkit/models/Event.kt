@@ -104,21 +104,18 @@ data class Event(
 
                 Action.Type.JettonSwap -> {
                     val jettonSwap = action.jettonSwap ?: continue
+
                     val jettonMasterIn = jettonSwap.jettonMasterIn
                     if (jettonMasterIn != null) {
-                        tags.add(Tag(id, Tag.Type.Incoming, Tag.Platform.Jetton, jettonMasterIn.address))
                         tags.add(Tag(id, Tag.Type.Swap, Tag.Platform.Jetton, jettonMasterIn.address))
                     } else {
-                        tags.add(Tag(id, Tag.Type.Incoming, Tag.Platform.Native))
                         tags.add(Tag(id, Tag.Type.Swap, Tag.Platform.Native))
                     }
 
                     val jettonMasterOut = jettonSwap.jettonMasterOut
                     if (jettonMasterOut != null) {
-                        tags.add(Tag(id, Tag.Type.Outgoing, Tag.Platform.Jetton, jettonMasterOut.address))
                         tags.add(Tag(id, Tag.Type.Swap, Tag.Platform.Jetton, jettonMasterOut.address))
                     } else {
-                        tags.add(Tag(id, Tag.Type.Outgoing, Tag.Platform.Native))
                         tags.add(Tag(id, Tag.Type.Swap, Tag.Platform.Native))
                     }
                 }

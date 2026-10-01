@@ -278,7 +278,7 @@ open class ApiClient(val baseUrl: String, val client: OkHttpClient = defaultClie
         is Array<*> -> toMultiValue(value, "csv").toString()
         is Iterable<*> -> toMultiValue(value, "csv").toString()
         is OffsetDateTime, is OffsetTime, is LocalDateTime, is LocalDate, is LocalTime ->
-            parseDateToQueryString(value)
+            parseDateToQueryString<Any>(value)
         else -> value.toString()
     }
 
