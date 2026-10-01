@@ -132,6 +132,53 @@ class TonKitStopDesktopTest {
     }
 
     @Test
+    fun startListener_duringPendingStop_handlesEventsAfterStopCompletes() = runTest(timeout = 30.seconds) {
+        val kit = kit(StandardTestDispatcher(testScheduler))
+        kit.startListener()
+        emitAndHandle("first")
+
+        val stopping = launch { kit.stop() }
+        runCurrent()
+        val starting = launch { kit.startListener() }
+        runCurrent()
+        completionGate.complete(Unit)
+        runCurrent()
+        assertTrue(stopping.isCompleted && starting.isCompleted)
+
+        emitAndHandle("after-restart")
+        assertEquals(2, eventChecks.get())
+        assertEquals(1, listener.flow.subscriptionCount.value)
+        kit.stop()
+        runCurrent()
+        assertEquals(0, listener.flow.subscriptionCount.value)
+    }
+
+    @Test
+    fun startListener_afterCancelledStop_handlesEvents() = runTest(timeout = 30.seconds) {
+        val kit = kit(StandardTestDispatcher(testScheduler))
+        kit.startListener()
+        emitAndHandle("first")
+
+        val interruptedStop = launch { kit.stop() }
+        runCurrent()
+        interruptedStop.cancel()
+        runCurrent()
+        val starting = launch { kit.startListener() }
+        runCurrent()
+        assertEquals("collectors while the cancelled one still runs", 1, listener.flow.subscriptionCount.value)
+        completionGate.complete(Unit)
+        runCurrent()
+        assertTrue(starting.isCompleted)
+
+        emitAndHandle("after-restart")
+        assertEquals(2, eventChecks.get())
+        assertEquals(1, listener.flow.subscriptionCount.value)
+        kit.stop()
+        runCurrent()
+        assertEquals(0, listener.flow.subscriptionCount.value)
+    }
+
+    @Test
     fun startListener_calledTwice_handlesEachEventOnce() = runTest(timeout = 30.seconds) {
         completionGate.complete(Unit)
         val kit = kit(StandardTestDispatcher(testScheduler))
@@ -156,7 +203,7 @@ class TonKitStopDesktopTest {
             thread(isDaemon = true) {
                 repeat(CONCURRENT_START_ROUNDS) {
                     startRound.await()
-                    kit.startListener()
+                    runBlocking { kit.startListener() }
                     roundStarted.await()
                 }
             }

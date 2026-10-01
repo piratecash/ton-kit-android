@@ -34,7 +34,6 @@ import io.horizontalsystems.tonkit.storage.requireValidKitDatabase
 import io.horizontalsystems.tonkit.storage.tonKitNamespace
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -44,12 +43,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.EventListener
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.logging.HttpLoggingInterceptor.Level
 import java.math.BigInteger
-import java.util.concurrent.atomic.AtomicReference
 
 class TonKit internal constructor(
     private val address: Address,
@@ -75,7 +75,8 @@ class TonKit internal constructor(
     val jettonBalanceMap get() = jettonBalanceMapFlow.value
 
     private val coroutineScope = CoroutineScope(dispatcher)
-    private val eventCollector = AtomicReference<Job?>(null)
+    private val listenerMutex = Mutex()
+    private var eventCollector: Job? = null
 
     suspend fun refresh() {
         sync()
@@ -93,12 +94,11 @@ class TonKit internal constructor(
     }
 
     /** Stops the listener and waits for the event handling it started, so no database access follows. */
-    suspend fun stop() {
+    suspend fun stop() = listenerMutex.withLock {
         stopListener()
-        // Released only once completed: a stop cancelled mid-join must leave the collector to the next stop.
-        val collector = eventCollector.get() ?: return
-        collector.cancelAndJoin()
-        eventCollector.compareAndSet(collector, null)
+        // Released only once completed: a stop cancelled mid-join must leave the collector to the next stop/start.
+        eventCollector?.cancelAndJoin()
+        eventCollector = null
     }
 
     private suspend fun handleEvent(eventId: String) {
@@ -225,18 +225,15 @@ class TonKit internal constructor(
         return rawMessageBroadcaster.transactionExists(messageHash)
     }
 
-    fun startListener() {
-        val collector = coroutineScope.launch(start = CoroutineStart.LAZY) {
-            apiListener.transactionFlow.collect {
-                handleEvent(it)
+    suspend fun startListener() = listenerMutex.withLock {
+        // A collector left by a cancelled stop may still be handling an event; never run two at once.
+        eventCollector?.takeIf { it.isCancelled }?.join()
+        if (eventCollector?.isActive != true) {
+            eventCollector = coroutineScope.launch {
+                apiListener.transactionFlow.collect {
+                    handleEvent(it)
+                }
             }
-        }
-        // A published collector stays owned until it completes, even before its creator has started it.
-        val current = eventCollector.get()
-        if (current?.isCompleted != false && eventCollector.compareAndSet(current, collector)) {
-            collector.start()
-        } else {
-            collector.cancel()
         }
         apiListener.start(address = address)
     }

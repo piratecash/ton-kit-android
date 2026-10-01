@@ -27,11 +27,6 @@ class DAppHostTest {
         }
     }
 
-    @Test
-    fun domain_malformedPercentEscapeInHost_constructsEntity() {
-        dApp("https://ex%zzample.com")
-    }
-
     private fun dApp(url: String) = TonV2Fixture.dApps().first().copy(url = url)
 
     private fun manifest(url: String) = DAppManifestEntity(url, NAME, "", null, null)
@@ -55,6 +50,16 @@ class DAppHostTest {
             "https:///no-host",
             "https://example.com:",
             "https://a+b.example.com?x#y",
+            "https://ex%",
+            "https://ex%A",
+            "https://ex%4zample.com",
+            "https://ex%zample.com",
+            "https://ex%zzample.com",
+            "https://ex%E2%82",
+            "https://ex%C3%28ample.com",
+            "https://ex%:8080",
+            "https://ex%C3%A9%E2x.com",
+            "https://ex%４１mple.com",
         )
         val URLS_WITHOUT_HOST = listOf("example.com", "mailto:dapp@example.com", "tonapp:x", "")
     }
