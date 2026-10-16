@@ -83,7 +83,9 @@ abstract class BaseWalletContract(
             return create(publicKey, v, if (testnet) -3 else -239, hashSigner)
         }
 
-        fun createIntMsg(gift: WalletTransfer): MessageRelaxed<Cell> = gift.toMessageRelaxed()
+        // ton-kotlin ignores the layout carried in MessageData; a null one is computed by size as before.
+        fun createIntMsg(gift: WalletTransfer): MessageRelaxed<Cell> =
+            gift.toMessageRelaxed(gift.messageData.layout)
     }
 
     val walletId = DEFAULT_WALLET_ID + workchain

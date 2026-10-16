@@ -22,6 +22,7 @@ internal class TonRawTransactionBuilder(
     private val sender: Address,
     private val hashSigner: HashSigner,
     private val publicKeyEd25519: PublicKeyEd25519,
+    private val deviceSigner: TonTransactionDeviceSigner? = null,
 ) {
     suspend fun tonTransfer(
         recipient: FriendlyAddress,
@@ -71,7 +72,7 @@ internal class TonRawTransactionBuilder(
         return api.estimateFee(message.base64(), params)
     }
 
-    fun signedTransaction(transfer: TransferEntity, fee: BigInteger): SignedRawTonTransaction {
+    suspend fun signedTransaction(transfer: TransferEntity, fee: BigInteger): SignedRawTonTransaction {
         val signed = signedTransaction(transfer)
         return SignedRawTonTransaction(
             raw = signed.raw,
@@ -84,8 +85,9 @@ internal class TonRawTransactionBuilder(
         )
     }
 
-    fun signedTransaction(transfer: TransferEntity): BuiltRawTonTransaction {
-        val message = transfer.toSignedMessage(false)
+    suspend fun signedTransaction(transfer: TransferEntity): BuiltRawTonTransaction {
+        val message = deviceSigner?.signedMessage(transfer.contract, transfer.ledgerTransaction)
+            ?: transfer.toSignedMessage(false)
         val decoded = RawMessageUtils.decode(message.toByteArray())
 
         return BuiltRawTonTransaction(

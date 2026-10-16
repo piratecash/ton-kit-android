@@ -257,16 +257,16 @@ class TonKit internal constructor(
         rawMessageBroadcaster.retryQueued()
     }
 
-    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet): String {
-        check(tonWallet is TonWallet.FullAccess)
-
-        return transactionSigner.sign(request, tonWallet)
+    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet): String = when (tonWallet) {
+        is TonWallet.FullAccess -> transactionSigner.sign(request, tonWallet)
+        is TonWallet.ExternalSigner -> transactionSigner.sign(request, tonWallet)
+        is TonWallet.WatchOnly -> error("Check failed.")
     }
 
-    suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet): Event {
-        check(tonWallet is TonWallet.FullAccess)
-
-        return transactionSigner.getDetails(request, tonWallet)
+    suspend fun getDetails(request: SendRequestEntity, tonWallet: TonWallet): Event = when (tonWallet) {
+        is TonWallet.FullAccess -> transactionSigner.getDetails(request, tonWallet)
+        is TonWallet.ExternalSigner -> transactionSigner.getDetails(request, tonWallet)
+        is TonWallet.WatchOnly -> error("Check failed.")
     }
 
 //    enum WalletVersion {
@@ -365,6 +365,10 @@ class TonKit internal constructor(
                         tonWallet.hashSigner,
                         tonWallet.publicKeyEd25519
                     )
+                }
+
+                is TonWallet.ExternalSigner -> {
+                    TransactionSender(api, address, tonWallet.publicKeyEd25519, tonWallet.deviceSigner)
                 }
 
                 is TonWallet.WatchOnly -> null

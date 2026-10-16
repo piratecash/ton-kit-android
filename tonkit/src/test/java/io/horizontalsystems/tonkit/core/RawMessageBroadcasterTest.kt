@@ -434,12 +434,14 @@ internal class FakeApi(
 ) : IApi {
     var sendCalls = 0
         private set
+    val sentBocs = mutableListOf<String>()
     private var transactionExistsCalls = 0
     private var seqnoCalls = 0
 
     override suspend fun send(boc: String) {
         guard()
         sendCalls += 1
+        sentBocs += boc
         if (sendDelayMillis > 0) {
             delay(sendDelayMillis)
         }

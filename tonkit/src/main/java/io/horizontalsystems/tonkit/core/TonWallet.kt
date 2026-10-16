@@ -24,11 +24,15 @@ sealed interface TonWallet {
             hashSigner = PrivateKeyHashSigner(privateKeyEd25519)
         )
 
-        override val address: Address by lazy {
-            val walletV4R2Contract =
-                WalletV4R2Contract(publicKey = publicKeyEd25519, hashSigner = hashSigner)
-            Address(walletV4R2Contract.address)
-        }
+        override val address: Address by lazy { v4R2Address(publicKeyEd25519, hashSigner) }
+    }
+
+    /** Signs on a hardware device through [deviceSigner], never through a [HashSigner]. */
+    class ExternalSigner(
+        val publicKeyEd25519: PublicKeyEd25519,
+        val deviceSigner: TonTransactionDeviceSigner,
+    ) : TonWallet {
+        override val address: Address by lazy { v4R2Address(publicKeyEd25519, DeviceOnlyHashSigner) }
     }
 
     data class Seed(val seed: ByteArray) : FullAccess(
@@ -43,3 +47,6 @@ sealed interface TonWallet {
         )
     )
 }
+
+private fun v4R2Address(publicKey: PublicKeyEd25519, hashSigner: HashSigner): Address =
+    Address(WalletV4R2Contract(publicKey = publicKey, hashSigner = hashSigner).address)

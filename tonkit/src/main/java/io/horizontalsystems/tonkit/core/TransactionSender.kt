@@ -9,12 +9,18 @@ import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
 import org.ton.kotlin.crypto.PublicKeyEd25519
 import java.math.BigInteger
 
-class TransactionSender(
+class TransactionSender private constructor(
     private val api: IApi,
     private val sender: Address,
-    hashSigner: HashSigner,
-    publicKeyEd25519: PublicKeyEd25519
+    private val rawTransactionBuilder: TonRawTransactionBuilder,
 ) {
+    constructor(
+        api: IApi,
+        sender: Address,
+        hashSigner: HashSigner,
+        publicKeyEd25519: PublicKeyEd25519
+    ) : this(api, sender, TonRawTransactionBuilder(api, sender, hashSigner, publicKeyEd25519))
+
     // Binary-compatible with the original TonApi-typed constructor.
     constructor(
         api: TonApi,
@@ -23,7 +29,12 @@ class TransactionSender(
         publicKeyEd25519: PublicKeyEd25519
     ) : this(api as IApi, sender, hashSigner, publicKeyEd25519)
 
-    private val rawTransactionBuilder = TonRawTransactionBuilder(api, sender, hashSigner, publicKeyEd25519)
+    internal constructor(
+        api: IApi,
+        sender: Address,
+        publicKeyEd25519: PublicKeyEd25519,
+        deviceSigner: TonTransactionDeviceSigner,
+    ) : this(api, sender, TonRawTransactionBuilder(api, sender, DeviceOnlyHashSigner, publicKeyEd25519, deviceSigner))
 
     suspend fun estimateFee(
         recipient: FriendlyAddress,

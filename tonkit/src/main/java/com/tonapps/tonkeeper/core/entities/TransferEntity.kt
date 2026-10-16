@@ -9,6 +9,8 @@ import com.tonapps.icu.Coins
 import com.tonapps.ledger.ton.TonPayloadFormat
 import com.tonapps.ledger.ton.Transaction
 import com.tonapps.ledger.ton.TransactionBuilder
+import com.tonapps.ledger.ton.commentHint
+import com.tonapps.ledger.ton.deviceTimeout
 import com.tonapps.security.Security
 import com.tonapps.security.hex
 import com.tonapps.wallet.api.entity.BalanceEntity
@@ -34,7 +36,9 @@ data class TransferEntity(
     val validUntil: Long,
     val bounceable: Boolean,
     val comment: String?,
-    val nftAddress: String? = null
+    val nftAddress: String? = null,
+    // One per transfer: the signed body and the device hint must carry the same id.
+    val queryId: BigInteger = newWalletQueryId(),
 ) {
 
     val contract: BaseWalletContract
@@ -99,7 +103,7 @@ data class TransferEntity(
             builder.setDestination(AddrStd.parse(nftAddress!!))
             builder.setPayload(
                 TonPayloadFormat.NftTransfer(
-                    queryId = newWalletQueryId(),
+                    queryId = queryId,
                     newOwnerAddress = destination,
                     excessesAddress = contract.address,
                     forwardPayload = TonTransferHelper.text(comment),
@@ -112,7 +116,7 @@ data class TransferEntity(
             builder.setDestination(AddrStd.parse(token.walletAddress))
             builder.setPayload(
                 TonPayloadFormat.JettonTransfer(
-                    queryId = newWalletQueryId(),
+                    queryId = queryId,
                     coins = coins,
                     receiverAddress = destination,
                     excessesAddress = contract.address,
@@ -124,13 +128,14 @@ data class TransferEntity(
         } else {
             builder.setCoins(coins)
             builder.setDestination(destination)
-            if (comment != null) {
-                builder.setPayload(TonPayloadFormat.Comment(comment))
+            if (!comment.isNullOrEmpty()) {
+                builder.setPayload(commentHint(comment))
             }
         }
+        builder.setBody(body())
         builder.setSendMode(sendMode)
         builder.setSeqno(seqno)
-        builder.setTimeout(validUntil.toInt())
+        builder.setTimeout(deviceTimeout(seqno, validUntil))
         builder.setBounceable(bounceable)
         builder.setStateInit(stateInit)
         builder.build()
@@ -167,7 +172,7 @@ data class TransferEntity(
             coins = coins,
             toAddress = destination,
             responseAddress = contract.address,
-            queryId = newWalletQueryId(),
+            queryId = queryId,
             body = comment,
         )
     }
@@ -176,7 +181,7 @@ data class TransferEntity(
         return TonTransferHelper.nft(
             newOwnerAddress = destination,
             excessesAddress = contract.address,
-            queryId = newWalletQueryId(),
+            queryId = queryId,
             body = comment,
         )
     }
