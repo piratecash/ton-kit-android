@@ -5,8 +5,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RawQuery
-import androidx.sqlite.db.SimpleSQLiteQuery
-import androidx.sqlite.db.SupportSQLiteQuery
+import androidx.room.RoomRawQuery
+import androidx.room.Transaction
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.EventSyncState
 import io.horizontalsystems.tonkit.models.Tag
@@ -17,9 +17,9 @@ import io.horizontalsystems.tonkit.models.TagToken
 interface EventDao {
 
     @Query("SELECT * FROM EventSyncState LIMIT 0, 1")
-    fun eventSyncState(): EventSyncState?
+    suspend fun eventSyncState(): EventSyncState?
 
-    fun events(tagQuery: TagQuery, beforeLt: Long?, limit: Int): List<Event> {
+    suspend fun events(tagQuery: TagQuery, beforeLt: Long?, limit: Int): List<Event> {
         val arguments = mutableListOf<String>()
         val whereConditions = mutableListOf<String>()
         var joinClause = ""
@@ -67,43 +67,47 @@ interface EventDao {
             $limitClause
             """
 
-        val query = SimpleSQLiteQuery(sql, arguments.toTypedArray())
+        val query = RoomRawQuery(sql) { statement ->
+            arguments.forEachIndexed { index, argument -> statement.bindText(index + 1, argument) }
+        }
 
         return events(query)
     }
 
     @RawQuery
-    fun events(query: SupportSQLiteQuery): List<Event>
+    suspend fun events(query: RoomRawQuery): List<Event>
 
     @Query("SELECT * FROM Event WHERE id IN (:ids)")
-    fun events(ids: List<String>): List<Event>
+    suspend fun events(ids: List<String>): List<Event>
 
     @Query("SELECT COUNT(*) FROM Event WHERE id = :id AND inProgress = 0")
-    fun isEventCompleted(id: String): Boolean
+    suspend fun isEventCompleted(id: String): Boolean
 
     @Query("SELECT * FROM Event ORDER BY lt DESC LIMIT 0, 1")
-    fun latestEvent(): Event?
+    suspend fun latestEvent(): Event?
 
     @Query("SELECT * FROM Event ORDER BY lt ASC LIMIT 0, 1")
-    fun oldestEvent(): Event?
+    suspend fun oldestEvent(): Event?
 
     @Query("SELECT platform, jettonAddress FROM Tag WHERE platform IS NOT NULL")
-    fun tagTokens(): List<TagToken>
+    suspend fun tagTokens(): List<TagToken>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun save(eventSyncState: EventSyncState)
+    suspend fun save(eventSyncState: EventSyncState)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun save(events: List<Event>)
+    suspend fun save(events: List<Event>)
 
-    fun resave(tags: List<Tag>, eventIds: List<String>) {
-        deleteTags(eventIds)
+    @Transaction
+    suspend fun saveWithTags(events: List<Event>, tags: List<Tag>) {
+        save(events)
+        deleteTags(events.map { it.id })
         insertTags(tags)
     }
 
     @Query("DELETE FROM Tag WHERE eventId IN (:eventIds)")
-    fun deleteTags(eventIds: List<String>)
+    suspend fun deleteTags(eventIds: List<String>)
 
     @Insert
-    fun insertTags(tags: List<Tag>)
+    suspend fun insertTags(tags: List<Tag>)
 }

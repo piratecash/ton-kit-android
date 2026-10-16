@@ -1,6 +1,6 @@
 package io.horizontalsystems.tonkit.core
 
-import android.util.Log
+import co.touchlab.kermit.Logger
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.Event
@@ -24,6 +24,7 @@ class EventManager(
     private val address: Address,
     private val api: IApi,
     private val dao: EventDao,
+    private val logger: Logger,
 ) {
     private val eventFlow = MutableSharedFlow<EventInfoWithTags>()
 
@@ -31,7 +32,7 @@ class EventManager(
         MutableStateFlow<SyncState>(SyncState.NotSynced(TonKit.SyncError.NotStarted))
     val syncStateFlow = _syncStateFlow.asStateFlow()
 
-    fun events(tagQuery: TagQuery, beforeLt: Long?, limit: Int?): List<Event> {
+    suspend fun events(tagQuery: TagQuery, beforeLt: Long?, limit: Int?): List<Event> {
         return dao.events(tagQuery, beforeLt, limit ?: 100)
     }
 
@@ -54,15 +55,15 @@ class EventManager(
         }
     }
 
-    fun tagTokens(): List<TagToken> {
+    suspend fun tagTokens(): List<TagToken> {
         return dao.tagTokens()
     }
 
     suspend fun sync() {
-        Log.d("AAA", "Syncing events...")
+        logger.d { "Syncing events..." }
 
         if (_syncStateFlow.value is SyncState.Syncing) {
-            Log.d("AAA", "Syncing events is in progress")
+            logger.d { "Syncing events is in progress" }
             return
         }
 
@@ -74,17 +75,16 @@ class EventManager(
             val latestEvent = dao.latestEvent()
 
             if (latestEvent != null) {
-                Log.d("AAA", "Fetching latest events...")
+                logger.d { "Fetching latest events..." }
 
                 val startTimestamp = latestEvent.timestamp
                 var beforeLt: Long? = null
 
                 do {
                     val events = api.getEvents(address, beforeLt, startTimestamp, limit)
-                    Log.d(
-                        "AAA",
+                    logger.d {
                         "Got latest events: ${events.size}, beforeLt: $beforeLt, startTimestamp: $startTimestamp"
-                    )
+                    }
 
                     handleLatest(events)
 
@@ -100,13 +100,13 @@ class EventManager(
             val allSynced = eventSyncState?.allSynced ?: false
 
             if (!allSynced) {
-                Log.d("AAA", "Fetching history events...")
+                logger.d { "Fetching history events..." }
 
                 val oldestEvent = dao.oldestEvent()
                 var beforeLt = oldestEvent?.lt
                 do {
                     val events = api.getEvents(address, beforeLt, null, limit)
-                    Log.d("AAA", "Got history events: ${events.size}, beforeLt: $beforeLt")
+                    logger.d { "Got history events: ${events.size}, beforeLt: $beforeLt" }
 
                     handle(events, true)
 
@@ -156,18 +156,17 @@ class EventManager(
     private suspend fun handle(events: List<Event>, initial: Boolean) {
         if (events.isEmpty()) return
 
-        dao.save(events)
         val eventsWithTags = events.map { event ->
             EventWithTags(event, event.tags(address))
         }
 
         val tags = eventsWithTags.map { it.tags }.flatten()
-        dao.resave(tags, events.map { it.id })
+        dao.saveWithTags(events, tags)
 
         eventFlow.emit(EventInfoWithTags(eventsWithTags, initial))
     }
 
-    fun isEventCompleted(eventId: String) : Boolean {
+    suspend fun isEventCompleted(eventId: String) : Boolean {
         return dao.isEventCompleted(eventId)
     }
 

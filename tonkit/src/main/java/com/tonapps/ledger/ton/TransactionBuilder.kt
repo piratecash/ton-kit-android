@@ -3,6 +3,7 @@ package com.tonapps.ledger.ton
 import org.ton.block.AddrStd
 import org.ton.block.Coins
 import org.ton.block.StateInit
+import org.ton.cell.Cell
 
 class TransactionBuilder {
     private lateinit var destination: AddrStd
@@ -13,6 +14,7 @@ class TransactionBuilder {
     private lateinit var coins: Coins
     private var stateInit: StateInit? = null
     private var payload: TonPayloadFormat? = null
+    private var body: Cell? = null
 
     fun setDestination(to: AddrStd) = apply { this.destination = to }
     fun setSendMode(sendMode: Int) = apply { this.sendMode = sendMode }
@@ -22,6 +24,7 @@ class TransactionBuilder {
     fun setCoins(amount: Coins) = apply { this.coins = amount }
     fun setStateInit(stateInit: StateInit?) = apply { this.stateInit = stateInit }
     fun setPayload(payload: TonPayloadFormat?) = apply { this.payload = payload }
+    fun setBody(body: Cell?) = apply { this.body = body }
 
     fun build(): Transaction {
         if (!::destination.isInitialized || !::coins.isInitialized) {
@@ -35,7 +38,8 @@ class TransactionBuilder {
             bounceable = bounceable,
             coins = coins,
             stateInit = stateInit,
-            payload = payload
+            payload = payload,
+            body = body,
         )
     }
 }

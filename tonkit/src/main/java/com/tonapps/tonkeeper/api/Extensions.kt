@@ -1,6 +1,5 @@
 package com.tonapps.tonkeeper.api
 
-import android.util.Log
 import com.squareup.moshi.adapter
 import com.tonapps.blockchain.ton.extensions.toUserFriendly
 import com.tonapps.icu.Coins
@@ -16,7 +15,6 @@ import io.tonapi.models.JettonSwapAction
 import io.tonapi.models.MessageConsequences
 import io.tonapi.models.NftItem
 import io.tonapi.models.TokenRates
-import kotlinx.coroutines.delay
 import kotlin.math.abs
 
 private val nftItemPreviewSizes = arrayOf(
@@ -60,22 +58,6 @@ val MessageConsequences.totalFees: Long
 
 //val PoolImplementationType.iconURL: String
 //    get() = "res:/${icon}"
-
-suspend fun <R> withRetry(
-    times: Int = 5,
-    delay: Long = 1000,
-    block: () -> R
-): R? {
-    for (i in 0 until times) {
-        try {
-            return block()
-        } catch (e: Throwable) {
-            Log.e("RetryErrorLog", "error", e)
-        }
-        delay(delay)
-    }
-    return null
-}
 
 @OptIn(ExperimentalStdlibApi::class)
 inline fun <reified T> toJSON(obj: T?): String {

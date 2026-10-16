@@ -1,18 +1,12 @@
 package com.tonapps.wallet.data.tonconnect.entities
 
-import android.net.Uri
-import android.os.Parcelable
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Ignore
 import com.tonapps.security.CryptoBox
-import com.tonapps.security.Sodium
 import com.tonapps.security.hex
 import com.tonapps.wallet.data.account.entities.ProofDomainEntity
-import kotlinx.parcelize.IgnoredOnParcel
-import kotlinx.parcelize.Parcelize
 
-@Parcelize
 @Entity(primaryKeys = ["walletId", "url"])
 data class DAppEntity(
     val url: String,
@@ -25,17 +19,11 @@ data class DAppEntity(
     val enablePush: Boolean = false,
     @Embedded(prefix = "manifest_")
     val manifest: DAppManifestEntity,
-): Parcelable {
+) {
 
     @Ignore
-    @IgnoredOnParcel
-    val uri: Uri = Uri.parse(url)
+    val domain = ProofDomainEntity(requireNotNull(url.uriHost) { "dApp url has no host" })
 
-    @Ignore
-    @IgnoredOnParcel
-    val domain = ProofDomainEntity(uri.host!!)
-
-    @IgnoredOnParcel
     val publicKeyHex: String
         get() = hex(keyPair.publicKey)
 
@@ -47,10 +35,7 @@ data class DAppEntity(
     }
 
     fun encrypt(body: ByteArray): ByteArray {
-        val nonce = CryptoBox.nonce()
-        val cipher = ByteArray(body.size + Sodium.cryptoBoxMacBytes())
-        Sodium.cryptoBoxEasy(cipher, body, body.size, nonce, clientId.hex(), keyPair.privateKey)
-        return nonce + cipher
+        return CryptoBox.encrypt(body, clientId.hex(), keyPair.privateKey)
     }
 
     fun decrypt(body: String): ByteArray {
@@ -58,11 +43,7 @@ data class DAppEntity(
     }
 
     fun decrypt(body: ByteArray): ByteArray {
-        val nonce = body.sliceArray(0 until Sodium.cryptoBoxNonceBytes())
-        val cipher = body.sliceArray(Sodium.cryptoBoxNonceBytes() until body.size)
-        val message = ByteArray(cipher.size - Sodium.cryptoBoxMacBytes())
-        Sodium.cryptoBoxOpenEasy(message, cipher, cipher.size, nonce, clientId.hex(), keyPair.privateKey)
-        return message
+        return CryptoBox.decrypt(body, clientId.hex(), keyPair.privateKey)
     }
 
 }

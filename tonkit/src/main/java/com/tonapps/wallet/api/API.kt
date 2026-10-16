@@ -1,5 +1,6 @@
 package com.tonapps.wallet.api
 
+import co.touchlab.kermit.Logger
 import com.tonapps.network.SSEvent
 import com.tonapps.network.post
 import com.tonapps.network.sse
@@ -9,15 +10,17 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-class API {
+class API(
+    private val logger: Logger,
+    bridgeUrl: String = BRIDGE_URL,
+    private val tonAPIHttpClient: OkHttpClient = createTonAPIHttpClient()
+) {
 
     val defaultHttpClient = baseOkHttpClientBuilder().build()
-
-    private val tonAPIHttpClient: OkHttpClient by lazy {
-        createTonAPIHttpClient()
-    }
+    private val bridgeBaseUrl = bridgeUrl.trimEnd('/')
 
 //    private val internalApi = InternalApi(context, defaultHttpClient)
 //    private val configRepository = ConfigRepository(context, scope, internalApi)
@@ -206,17 +209,19 @@ class API {
 
     fun tonconnectEvents(
         publicKeys: List<String>,
-        lastEventId: String?
+        lastEventId: String?,
+        onConnected: (() -> Unit)? = null
     ): Flow<SSEvent> {
         if (publicKeys.isEmpty()) {
+            onConnected?.invoke()
             return emptyFlow()
         }
         val value = publicKeys.joinToString(",")
-        var url = "${BRIDGE_URL}/events?client_id=$value"
+        var url = "$bridgeBaseUrl/events?client_id=$value"
         if (lastEventId != null) {
             url += "&last_event_id=$lastEventId"
         }
-        return tonAPIHttpClient.sse(url)
+        return tonAPIHttpClient.sse(url, logger, onConnected)
     }
 
 //    fun tonconnectPayload(): String? {
@@ -244,12 +249,20 @@ class API {
         publicKeyHex: String,
         clientId: String,
         body: String
-    ) {
+    ): Boolean {
         val mimeType = "text/plain".toMediaType()
-        val url = "${BRIDGE_URL}/message?client_id=$publicKeyHex&to=$clientId&ttl=300"
-        val response = tonAPIHttpClient.post(url, body.toRequestBody(mimeType))
-        if (!response.isSuccessful) {
-            throw Exception("Failed sending event: ${response.code}")
+        val url = "$bridgeBaseUrl/message?client_id=$publicKeyHex&to=$clientId&ttl=300"
+        return try {
+            tonAPIHttpClient.post(url, body.toRequestBody(mimeType)).use { response ->
+                val successful = response.isSuccessful
+                if (!successful) {
+                    logger.w { "Failed sending TonConnect event: HTTP ${response.code}" }
+                }
+                successful
+            }
+        } catch (e: IOException) {
+            logger.w { "Failed sending TonConnect event: ${e::class.simpleName}" }
+            false
         }
     }
 

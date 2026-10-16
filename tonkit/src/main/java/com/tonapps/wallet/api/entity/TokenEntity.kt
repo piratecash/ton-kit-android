@@ -1,18 +1,15 @@
 package com.tonapps.wallet.api.entity
 
-import android.os.Parcelable
 import io.tonapi.models.JettonPreview
 import io.tonapi.models.JettonVerificationType
-import kotlinx.parcelize.Parcelize
 
-@Parcelize
 data class TokenEntity(
     val address: String,
     val name: String,
     val symbol: String,
     val decimals: Int,
     val verification: Verification
-): Parcelable {
+) {
 
     enum class Verification {
         whitelist, blacklist, none
