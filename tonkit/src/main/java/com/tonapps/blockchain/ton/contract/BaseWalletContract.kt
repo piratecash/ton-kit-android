@@ -28,6 +28,7 @@ import java.math.BigInteger
 enum class MessageType {
     Extension,
     Internal,
+    External,
 }
 
 enum class SignaturePosition {
@@ -109,7 +110,7 @@ abstract class BaseWalletContract(
     abstract fun createTransferUnsignedBody(
         validUntil: Long,
         seqno: Int,
-        messageType: MessageType = MessageType.Internal,
+        messageType: MessageType,
         queryId: BigInteger? = null,
         vararg gifts: WalletTransfer
     ): Cell

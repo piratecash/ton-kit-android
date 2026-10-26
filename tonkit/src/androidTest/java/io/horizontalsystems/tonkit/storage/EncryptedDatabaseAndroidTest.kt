@@ -147,6 +147,7 @@ class EncryptedDatabaseAndroidTest {
         context = context,
         walletId = walletId,
         databaseKey = databaseKey,
+        httpClient = TonKit.createHttpClient(),
     )
 
     private fun copyFixture() {

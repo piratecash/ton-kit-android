@@ -270,6 +270,7 @@ class TonKitDatabaseMigrationDesktopTest {
         context = kitContext,
         walletId = walletId,
         databaseKey = databaseKey,
+        httpClient = TonKit.createHttpClient(),
     )
 
     private fun copyFixture(target: File): File = TonV2Fixture.copyTo(TonV2Fixture.KIT_V2_RESOURCE, target)

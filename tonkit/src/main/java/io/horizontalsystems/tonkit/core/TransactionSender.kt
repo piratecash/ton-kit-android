@@ -1,40 +1,21 @@
 package io.horizontalsystems.tonkit.core
 
-import com.tonapps.blockchain.ton.contract.HashSigner
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.IApi
-import io.horizontalsystems.tonkit.api.TonApi
+import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
-import org.ton.kotlin.crypto.PublicKeyEd25519
 import java.math.BigInteger
 
 class TransactionSender private constructor(
     private val api: IApi,
-    private val sender: Address,
     private val rawTransactionBuilder: TonRawTransactionBuilder,
 ) {
-    constructor(
-        api: IApi,
-        sender: Address,
-        hashSigner: HashSigner,
-        publicKeyEd25519: PublicKeyEd25519
-    ) : this(api, sender, TonRawTransactionBuilder(api, sender, hashSigner, publicKeyEd25519))
+    constructor(api: IApi, tonWallet: TonWallet.FullAccess, network: Network) :
+        this(api, TonRawTransactionBuilder(api, tonWallet.walletEntity(network)))
 
-    // Binary-compatible with the original TonApi-typed constructor.
-    constructor(
-        api: TonApi,
-        sender: Address,
-        hashSigner: HashSigner,
-        publicKeyEd25519: PublicKeyEd25519
-    ) : this(api as IApi, sender, hashSigner, publicKeyEd25519)
-
-    internal constructor(
-        api: IApi,
-        sender: Address,
-        publicKeyEd25519: PublicKeyEd25519,
-        deviceSigner: TonTransactionDeviceSigner,
-    ) : this(api, sender, TonRawTransactionBuilder(api, sender, DeviceOnlyHashSigner, publicKeyEd25519, deviceSigner))
+    internal constructor(api: IApi, tonWallet: TonWallet.ExternalSigner, network: Network) :
+        this(api, TonRawTransactionBuilder(api, tonWallet.walletEntity(network), tonWallet.deviceSigner))
 
     suspend fun estimateFee(
         recipient: FriendlyAddress,
@@ -105,9 +86,9 @@ class TransactionSender private constructor(
      * the signed message.
      *
      * Offline signing is forbidden for an undeployed wallet (seqno == 0): the
-     * V4R2 contract writes 32 one-bits instead of validUntil for the deploy
-     * transaction, so the signed message would never expire while the result
-     * reported the requested validUntil. Send the first transaction online.
+     * v4R2 and W5 deploy transactions carry 32 one-bits instead of validUntil,
+     * so the signed message would never expire while the result reported the
+     * requested validUntil. Send the first transaction online.
      */
     suspend fun signedTonTransaction(
         recipient: FriendlyAddress,
@@ -141,7 +122,7 @@ class TransactionSender private constructor(
         return rawTransactionBuilder.signedTransaction(transfer, fee)
     }
 
-    suspend fun getAccountSeqno(): Int = api.getAccountSeqno(sender)
+    suspend fun getAccountSeqno(): Int = api.getAccountSeqno(rawTransactionBuilder.sender)
 
     suspend fun getRawTime(): Int = api.getRawTime()
 

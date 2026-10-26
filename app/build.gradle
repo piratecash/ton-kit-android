@@ -18,7 +18,11 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
-        buildConfigField "String", "WORDS", "${localProperties['words']}"
+        // -P overrides let a throwaway testnet wallet run without touching local.properties
+        def sampleProperty = { String key, String fallback -> project.findProperty(key) ?: localProperties.getProperty(key, fallback) }
+        buildConfigField "String", "WORDS", project.hasProperty('ton_words') ? "\"${project.property('ton_words')}\"" : "${localProperties['words']}"
+        buildConfigField "String", "TON_WALLET_VERSION", "\"${sampleProperty('ton_wallet_version', 'V4R2')}\""
+        buildConfigField "String", "TON_NETWORK", "\"${sampleProperty('ton_network', 'MainNet')}\""
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

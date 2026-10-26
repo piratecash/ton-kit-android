@@ -16,15 +16,9 @@ import com.tonapps.wallet.data.account.entities.WalletEntity
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
-import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.models.Network
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.bytestring.ByteString
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Protocol
-import okhttp3.Response
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertArrayEquals
@@ -57,7 +51,6 @@ import java.math.BigInteger
 class TonExternalSignerTest {
     private val publicKey = PublicKeyEd25519(ByteString(*hex("9aff66dcc01b79787f6038c8070b8f7b9f27e381297c846a59f743bb075ed61c")))
     private val ownRaw = "0:d67b2fc518f85dde98667ab7555e2fb3508ba37f23b8fb6f72fd54f5c83d2679"
-    private val own = AddrStd.parse(ownRaw)
     private val destination = AddrStd.parse("0:" + "2f".repeat(32))
     private val jettonWallet = AddrStd.parse("0:" + "3c".repeat(32))
     private val timeout = 1_893_456_000
@@ -130,7 +123,7 @@ class TonExternalSignerTest {
 
     @Test
     fun address_externalSigner_isV4R2AddressOfDeviceKey() {
-        assertEquals(Address.parse(ownRaw), TonWallet.ExternalSigner(publicKey, FakeDevice()).address)
+        assertEquals(Address.parse(ownRaw), TonWallet.ExternalSigner(publicKey, FakeDevice()).address(Network.MainNet))
     }
 
     @Test
@@ -199,7 +192,7 @@ class TonExternalSignerTest {
         val api = FakeApi(currentSeqno = listOf(0))
         val device = FakeDevice()
 
-        TransactionSender(api, Address(own), publicKey, device)
+        TransactionSender(api, TonWallet.ExternalSigner(publicKey, device), Network.MainNet)
             .send(FriendlyAddress(destination, false), TonKit.SendAmount.Amount(BigInteger.TEN), null)
 
         val transaction = device.transactions.single()
@@ -244,7 +237,7 @@ class TonExternalSignerTest {
         val device = FakeDevice(signedHash = ByteArray(32))
 
         assertThrows(TonExternalSignerException.SignedHashMismatch::class.java) {
-            runBlocking { TransactionSender(api, Address(own), publicKey, device).send(FriendlyAddress(destination, false), TonKit.SendAmount.Max, null) }
+            runBlocking { TransactionSender(api, TonWallet.ExternalSigner(publicKey, device), Network.MainNet).send(FriendlyAddress(destination, false), TonKit.SendAmount.Max, null) }
         }
         assertEquals(0, api.sendCalls)
     }
@@ -332,10 +325,10 @@ class TonExternalSignerTest {
     }
 
     private fun sender(device: FakeDevice) =
-        TransactionSender(FakeApi(throwOnAnyCall = IllegalStateException("offline")), Address(own), publicKey, device)
+        TransactionSender(FakeApi(throwOnAnyCall = IllegalStateException("offline")), TonWallet.ExternalSigner(publicKey, device), Network.MainNet)
 
     private fun onlineSender(device: FakeDevice, seqno: Int, api: FakeApi = FakeApi(currentSeqno = listOf(seqno))) =
-        TransactionSender(api, Address(own), publicKey, device)
+        TransactionSender(api, TonWallet.ExternalSigner(publicKey, device), Network.MainNet)
 
     private suspend fun sentBoc(device: FakeDevice, seqno: Int, send: suspend TransactionSender.() -> Unit): ByteArray {
         val api = FakeApi(currentSeqno = listOf(seqno))
@@ -379,19 +372,7 @@ class TonExternalSignerTest {
         )
     }
 
-    private fun signer(): TransactionSigner {
-        val client = OkHttpClient.Builder().addInterceptor { chain ->
-            val path = chain.request().url.encodedPath
-            val json = when {
-                path.endsWith("/seqno") -> """{"seqno":$SEQNO}"""
-                path.endsWith("/get_time") -> """{"time":$RAW_TIME}"""
-                else -> error("Unexpected request $path")
-            }
-            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
-                .body(json.toResponseBody("application/json".toMediaType())).build()
-        }.build()
-        return TransactionSigner(TonApi(Network.MainNet, client))
-    }
+    private fun signer() = TransactionSigner(fakeTonApi(SEQNO, RAW_TIME))
 
     private fun message(payload: Cell) = JSONObject()
         .put("address", jettonWallet.toString(userFriendly = true, bounceable = true))

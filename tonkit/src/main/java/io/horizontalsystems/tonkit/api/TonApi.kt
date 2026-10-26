@@ -27,7 +27,7 @@ import okhttp3.OkHttpClient
 import org.ton.cell.Cell
 import java.math.BigInteger
 
-class TonApi(network: Network, okHttpClient: OkHttpClient) : IApi {
+class TonApi(val network: Network, okHttpClient: OkHttpClient) : IApi {
     private val basePath = when (network) {
         MainNet -> "https://tonapi.io"
         TestNet -> "https://testnet.tonapi.io"

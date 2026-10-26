@@ -3,6 +3,7 @@ package io.horizontalsystems.tonkit.core
 import com.tonapps.blockchain.ton.contract.HashSigner
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
+import io.horizontalsystems.tonkit.models.Network
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.bytestring.ByteString
 import org.junit.Assert.assertEquals
@@ -27,7 +28,7 @@ class TransactionSenderOfflineTest {
     private val publicKey = PublicKeyEd25519(ByteString(*ByteArray(32) { (it + 1).toByte() }))
     private val sender = Address.parse(RawMessageTestHelper.senderAddress)
     private val recipient = FriendlyAddress.parse(RawMessageTestHelper.senderAddress)
-    private val transactionSender = TransactionSender(api, sender, hashSigner, publicKey)
+    private val transactionSender = senderOf(TonWalletVersion.V4R2)
 
     private val seqno = 7
     private val validUntil = 1_700_000_000L
@@ -86,12 +87,12 @@ class TransactionSenderOfflineTest {
     }
 
     @Test
-    fun signedTonTransaction_zeroSeqno_throwsBeforeAnyApiCall() {
+    fun signedTonTransaction_zeroSeqno_throwsBeforeAnyApiCall() = TonWalletVersion.entries.forEach { version ->
         // IllegalArgumentException (not FakeApi's IllegalStateException) proves
         // the undeployed-wallet guard fires before any api touch.
-        assertThrows(IllegalArgumentException::class.java) {
+        assertThrows(version.name, IllegalArgumentException::class.java) {
             runBlocking {
-                transactionSender.signedTonTransaction(
+                senderOf(version).signedTonTransaction(
                     recipient = recipient,
                     amount = TonKit.SendAmount.Amount(BigInteger.ONE),
                     comment = null,
@@ -104,10 +105,10 @@ class TransactionSenderOfflineTest {
     }
 
     @Test
-    fun signedJettonTransaction_zeroSeqno_throwsBeforeAnyApiCall() {
-        assertThrows(IllegalArgumentException::class.java) {
+    fun signedJettonTransaction_zeroSeqno_throwsBeforeAnyApiCall() = TonWalletVersion.entries.forEach { version ->
+        assertThrows(version.name, IllegalArgumentException::class.java) {
             runBlocking {
-                transactionSender.signedJettonTransaction(
+                senderOf(version).signedJettonTransaction(
                     jettonWallet = sender,
                     recipient = recipient,
                     amount = BigInteger.ONE,
@@ -119,4 +120,7 @@ class TransactionSenderOfflineTest {
             }
         }
     }
+
+    private fun senderOf(version: TonWalletVersion) =
+        TransactionSender(api, TonWallet.FullAccess(publicKey, hashSigner, version), Network.MainNet)
 }

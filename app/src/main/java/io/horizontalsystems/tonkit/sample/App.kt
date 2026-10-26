@@ -3,6 +3,7 @@ package io.horizontalsystems.tonkit.sample
 import android.app.Application
 import io.horizontalsystems.tonkit.core.TonKit
 import io.horizontalsystems.tonkit.core.TonWallet
+import io.horizontalsystems.tonkit.core.TonWalletVersion
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.tonconnect.TonConnectKit
 import kotlinx.coroutines.runBlocking
@@ -16,10 +17,9 @@ class App : Application() {
     }
 
     private fun initTonKit() = runBlocking {
-        val walletId = "wallet-${tonWallet.javaClass.simpleName}"
+        val walletId = "wallet-${tonWallet.javaClass.simpleName}-${tonWallet.version}"
 //        val walletId = UUID.randomUUID().toString()
 
-        val network = Network.MainNet
         // Demo keys only: a real wallet keeps a random key in secure storage.
         val databaseKey = sha256(walletId)
         TonKit.migrateDatabase(this@App, network, walletId, databaseKey)
@@ -28,7 +28,8 @@ class App : Application() {
             network,
             this@App,
             walletId,
-            databaseKey
+            databaseKey,
+            TonKit.createHttpClient(),
         )
 
         val tonConnectDatabaseKey = sha256("ton-connect-demo")
@@ -44,7 +45,9 @@ class App : Application() {
         val words = BuildConfig.WORDS.split(" ")
 //        val words =
 //            "used ugly meat glad balance divorce inner artwork hire invest already piano".split(" ")
-        val tonWallet = TonWallet.Mnemonic(words, "")
+        val tonWallet = TonWallet.Mnemonic(words, "", TonWalletVersion.valueOf(BuildConfig.TON_WALLET_VERSION))
+
+        val network = Network.valueOf(BuildConfig.TON_NETWORK)
 
         lateinit var tonKit: TonKit
         lateinit var tonConnectKit: TonConnectKit

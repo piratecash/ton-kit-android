@@ -2,6 +2,7 @@ package io.horizontalsystems.tonkit.core
 
 import com.tonapps.blockchain.ton.contract.BaseWalletContract
 import com.tonapps.blockchain.ton.contract.HashSigner
+import com.tonapps.blockchain.ton.contract.MessageType
 import com.tonapps.ledger.ton.Transaction
 import com.tonapps.ledger.ton.deviceTimeout
 import com.tonapps.ledger.ton.recognizePayload
@@ -49,6 +50,7 @@ internal suspend fun TonTransactionDeviceSigner.signedMessage(
     val unsignedBody = contract.createTransferUnsignedBody(
         validUntil = transaction.timeout.toUInt().toLong(),
         seqno = transaction.seqno,
+        messageType = MessageType.External,
         gifts = arrayOf(transaction.toWalletTransfer()),
     )
     val signature = sign(transaction)

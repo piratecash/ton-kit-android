@@ -1,29 +1,25 @@
 package io.horizontalsystems.tonkit.core
 
-import com.tonapps.blockchain.ton.contract.HashSigner
-import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.blockchain.ton.extensions.toByteArray
 import com.tonapps.icu.Coins
 import com.tonapps.tonkeeper.core.entities.TransferEntity
 import com.tonapps.wallet.api.entity.BalanceEntity
-import com.tonapps.wallet.data.account.Wallet
 import com.tonapps.wallet.data.account.entities.WalletEntity
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
-import org.ton.kotlin.crypto.PublicKeyEd25519
 import java.math.BigInteger
 
 internal class TonRawTransactionBuilder(
     private val api: IApi,
-    private val sender: Address,
-    private val hashSigner: HashSigner,
-    private val publicKeyEd25519: PublicKeyEd25519,
+    private val wallet: WalletEntity,
     private val deviceSigner: TonTransactionDeviceSigner? = null,
 ) {
+    val sender = wallet.senderAddress
+
     suspend fun tonTransfer(
         recipient: FriendlyAddress,
         amount: TonKit.SendAmount,
@@ -114,17 +110,8 @@ internal class TonRawTransactionBuilder(
         // no network call is made on this path.
         val resolvedSeqno = seqno ?: api.getAccountSeqno(sender)
         val resolvedValidUntil = validUntil ?: safeTimeout()
-        val walletEntity = WalletEntity(
-            id = "id",
-            publicKey = publicKeyEd25519,
-            type = Wallet.Type.Default,
-            version = WalletVersion.V4R2,
-            label = Wallet.Label("", "", 0),
-            hashSigner = hashSigner,
-            ledger = null,
-        )
 
-        return TransferEntity.Builder(walletEntity)
+        return TransferEntity.Builder(wallet)
             .setSeqno(resolvedSeqno)
             .setAmount(Coins.of(value.toBigDecimal(Coins.DEFAULT_DECIMALS)))
             .setMax(isMax)

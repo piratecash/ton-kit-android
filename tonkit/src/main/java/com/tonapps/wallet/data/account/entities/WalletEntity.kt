@@ -3,6 +3,7 @@ package com.tonapps.wallet.data.account.entities
 import com.tonapps.blockchain.ton.TonNetwork
 import com.tonapps.blockchain.ton.contract.BaseWalletContract
 import com.tonapps.blockchain.ton.contract.HashSigner
+import com.tonapps.blockchain.ton.contract.MessageType
 import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.toAccountId
 import com.tonapps.blockchain.ton.extensions.toRawAddress
@@ -72,6 +73,7 @@ data class WalletEntity(
         return contract.createTransferUnsignedBody(
             validUntil = validUntil,
             seqno = seqno,
+            messageType = MessageType.External,
             gifts = gifts.toTypedArray()
         )
     }

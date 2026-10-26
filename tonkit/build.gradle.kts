@@ -34,7 +34,7 @@ kotlin {
         val jvmCommonMain by creating {
             dependsOn(commonMain.get())
             dependencies {
-                // Public API exposes okhttp3.EventListener.Factory (TonKit.getInstance).
+                // Public API exposes okhttp3.EventListener.Factory (TonKit.createHttpClient).
                 api(libs.okhttp)
                 implementation(libs.okhttp.sse)
                 implementation(libs.logging.interceptor)

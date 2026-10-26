@@ -3,12 +3,10 @@ package io.horizontalsystems.tonkit.tonconnect
 import co.touchlab.kermit.Logger
 import com.tonapps.blockchain.ton.TonNetwork
 import com.tonapps.blockchain.ton.contract.HashSigner
-import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.extensions.base64
 import com.tonapps.network.get
 import com.tonapps.security.CryptoBox
 import com.tonapps.wallet.api.API
-import com.tonapps.wallet.data.account.Wallet
 import com.tonapps.wallet.data.account.WalletProof
 import com.tonapps.wallet.data.account.entities.ProofDomainEntity
 import com.tonapps.wallet.data.account.entities.WalletEntity
@@ -29,6 +27,7 @@ import io.horizontalsystems.sqlcipher.room.DatabaseMigrationRequiredException
 import io.horizontalsystems.sqlcipher.room.DatabaseMigrationResult
 import io.horizontalsystems.sqlcipher.room.InsufficientDatabaseMigrationSpaceException
 import io.horizontalsystems.tonkit.core.TonWallet
+import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.storage.TON_CONNECT_DATABASE_NAME
 import io.horizontalsystems.tonkit.storage.databaseFile
 import io.horizontalsystems.tonkit.storage.requireValidDatabaseKey
@@ -94,14 +93,8 @@ class TonConnectKit(
         walletId: String,
         tonWallet: TonWallet.FullAccess
     ): DAppEventSuccessEntity {
-        val walletEntity = WalletEntity(
-            id = walletId,
-            publicKey = tonWallet.publicKeyEd25519,
-            type = Wallet.Type.Default,
-            version = WalletVersion.V4R2,
-            hashSigner = tonWallet.hashSigner,
-            label = Wallet.Label("", "", 0)
-        )
+        // This kit connects mainnet wallets only.
+        val walletEntity = tonWallet.walletEntity(Network.MainNet).copy(id = walletId)
         return connect(
             walletEntity,
             tonWallet.hashSigner,

@@ -315,12 +315,18 @@ class TonKit internal constructor(
                 .build()
         }
 
+        /** Pass the client to every [getInstance] of an account so its kits share one API key rotation state. */
+        fun createHttpClient(
+            apiKeys: List<String> = emptyList(),
+            eventListenerFactory: EventListener.Factory? = null,
+        ): TonHttpClient = TonHttpClient(buildOkHttpClient(Logger.withTag("TonKit"), apiKeys, eventListenerFactory))
+
         /**
          * Opens the wallet's database, which [migrateDatabase] must have encrypted with the same
-         * [databaseKey] first, and loads the stored account and jetton balances before any network client
-         * is created. [databaseKey] must be exactly 32 bytes and [walletId] non-blank, without a path
-         * separator or a reserved migration name, otherwise [IllegalArgumentException] is thrown before
-         * any I/O.
+         * [databaseKey] first, and loads the stored account and jetton balances before any network call.
+         * Each kit opens its own transaction stream over [httpClient]. [databaseKey] must be exactly 32
+         * bytes and [walletId] non-blank, without a path separator or a reserved migration name, otherwise
+         * [IllegalArgumentException] is thrown before any I/O.
          *
          * Recovery: [DatabaseMigrationRequiredException] or [DatabaseMigrationInProgressException] mean
          * [migrateDatabase] has to run; [DatabaseKeyMismatchException] keeps the database and is only
@@ -332,12 +338,11 @@ class TonKit internal constructor(
             context: PlatformContext,
             walletId: String,
             databaseKey: ByteArray,
-            apiKeys: List<String> = emptyList(),
-            eventListenerFactory: EventListener.Factory? = null,
+            httpClient: TonHttpClient,
         ): TonKit {
             requireValidKitDatabase(walletId, network)
             requireValidDatabaseKey(databaseKey)
-            val address = tonWallet.address
+            val address = tonWallet.address(network)
 
             val database = tonKitNamespace.open {
                 KitDatabase.getInstance(context, kitDatabaseName(walletId, network), databaseKey)
@@ -348,8 +353,7 @@ class TonKit internal constructor(
             val jettonBalances = jettonDao.getJettonBalances()
 
             val logger = kitLogger(network)
-            val okHttpClient = buildOkHttpClient(logger, apiKeys, eventListenerFactory)
-            val api = TonApi(network, okHttpClient)
+            val api = TonApi(network, httpClient.okHttpClient)
             val transactionSigner = getTransactionSigner(api)
 
             val accountManager = AccountManager(address, api, accountDao, account, logger)
@@ -358,23 +362,12 @@ class TonKit internal constructor(
             val rawMessageBroadcaster = RawMessageBroadcaster(api, database.rawMessageBroadcastDao())
 
             val transactionSender = when (tonWallet) {
-                is TonWallet.FullAccess -> {
-                    TransactionSender(
-                        api,
-                        address,
-                        tonWallet.hashSigner,
-                        tonWallet.publicKeyEd25519
-                    )
-                }
-
-                is TonWallet.ExternalSigner -> {
-                    TransactionSender(api, address, tonWallet.publicKeyEd25519, tonWallet.deviceSigner)
-                }
-
+                is TonWallet.FullAccess -> TransactionSender(api, tonWallet, network)
+                is TonWallet.ExternalSigner -> TransactionSender(api, tonWallet, network)
                 is TonWallet.WatchOnly -> null
             }
 
-            val apiListener = TonApiListener(network, okHttpClient, logger)
+            val apiListener = TonApiListener(network, httpClient.okHttpClient, logger)
 
             return TonKit(
                 address,

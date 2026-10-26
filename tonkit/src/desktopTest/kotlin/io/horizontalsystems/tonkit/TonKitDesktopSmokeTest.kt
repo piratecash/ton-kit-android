@@ -104,6 +104,7 @@ class TonKitDesktopSmokeTest {
         context = context,
         walletId = WALLET_ID,
         databaseKey = KEY,
+        httpClient = TonKit.createHttpClient(),
     )
 
     private companion object {

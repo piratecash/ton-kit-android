@@ -9,6 +9,7 @@ import com.tonapps.blockchain.ton.contract.WalletVersion
 import com.tonapps.blockchain.ton.contract.w5.W5Context.Companion.getWorkchain
 import com.tonapps.blockchain.ton.extensions.hex
 import com.tonapps.blockchain.ton.toTonBigInt
+import org.ton.bigint.BigInt
 import org.ton.bigint.toBigInt
 import org.ton.bigint.xor
 import org.ton.boc.BagOfCells
@@ -28,11 +29,14 @@ class WalletV5R1Contract(
         publicKey, W5Context.Client(networkGlobalId = network.value), hashSigner
     )
 
+    // The contract rejects a request whose wallet_id differs from the one in its state.
+    private val walletIdV5R1: BigInt = context.networkGlobalId.toBigInt().xor(context.walletId)
+
     override fun getStateCell(): Cell {
         return CellBuilder.createCell {
             storeUInt(1, 1)
             storeUInt(0, 32)
-            storeInt(context.networkGlobalId.toBigInt().xor(context.walletId), 32)
+            storeInt(walletIdV5R1, 32)
             storeBytes(publicKey.key.toByteArray())
             storeBit(false)
         }
@@ -66,7 +70,7 @@ class WalletV5R1Contract(
                 storeUInt(W5OpCodes.AuthExtension.code, 32)
                 val query = queryId?.toTonBigInt() ?: 0.toBigInt()
                 storeUInt(query, 64)
-                storeRef(W5Action.storeOutListExtendedV5R1(gifts.toList(), messageType))
+                storeSlice(W5Action.storeOutListExtendedV5R1(gifts.toList(), messageType).beginParse())
             }
         }
 
@@ -77,7 +81,7 @@ class WalletV5R1Contract(
         }
 
         val signingMessage = CellBuilder.beginCell().storeUInt(opCode.code, 32)
-            .storeSlice(context.cell().beginParse())
+            .storeInt(walletIdV5R1, 32)
         if (seqno == 0) {
             for (i in 0 until 32) {
                 signingMessage.storeBit(true)

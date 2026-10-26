@@ -3,6 +3,7 @@ package com.tonapps.tonkeeper.core.entities
 import com.tonapps.blockchain.ton.TonSendMode
 import com.tonapps.blockchain.ton.TonTransferHelper
 import com.tonapps.blockchain.ton.contract.BaseWalletContract
+import com.tonapps.blockchain.ton.contract.MessageType
 import com.tonapps.extensions.toByteArray
 import com.tonapps.blockchain.ton.extensions.sign
 import com.tonapps.icu.Coins
@@ -92,6 +93,7 @@ data class TransferEntity(
         contract.createTransferUnsignedBody(
             validUntil = validUntil,
             seqno = seqno,
+            messageType = MessageType.External,
             gifts = gifts
         )
     }

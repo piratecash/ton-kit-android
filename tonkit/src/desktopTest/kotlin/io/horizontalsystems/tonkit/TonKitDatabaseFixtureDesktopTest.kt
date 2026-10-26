@@ -90,6 +90,7 @@ class TonKitDatabaseFixtureDesktopTest {
         context = context,
         walletId = WALLET_ID,
         databaseKey = key,
+        httpClient = TonKit.createHttpClient(),
     )
 
     private suspend fun withKitDatabase(block: suspend (KitDatabase) -> Unit) {
