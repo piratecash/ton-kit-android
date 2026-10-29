@@ -15,6 +15,7 @@ import okhttp3.Response
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
+import java.io.IOException
 
 private fun requestBuilder(url: String): Request.Builder {
     val builder = Request.Builder()
@@ -78,12 +79,12 @@ fun OkHttpClient.sse(
         override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
             // A listener failure carries the bridge payload in its message.
             logger.w { "SSE failure, HTTP ${response?.code}: ${t?.let { it::class.simpleName }}" }
-            this@callbackFlow.close(t)
+            this@callbackFlow.close(t ?: IOException("HTTP ${response?.code}"))
         }
 
         override fun onClosed(eventSource: EventSource) {
             logger.d { "SSE closed" }
-            this@callbackFlow.close()
+            this@callbackFlow.close(IOException("SSE closed by server"))
         }
 
         override fun onOpen(eventSource: EventSource, response: Response) {
