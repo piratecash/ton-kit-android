@@ -10,7 +10,10 @@ import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
+import io.horizontalsystems.tonkit.models.TonFeeEstimate
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
+import org.ton.cell.Cell
+import org.ton.contract.wallet.WalletTransfer
 import java.math.BigInteger
 
 internal class TonRawTransactionBuilder(
@@ -61,11 +64,24 @@ internal class TonRawTransactionBuilder(
         )
     }
 
-    suspend fun estimateFee(transfer: TransferEntity): BigInteger {
-        val message = transfer.toSignedMessage(true)
-        val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), EMULATED_BALANCE))
+    suspend fun estimateFee(transfer: TransferEntity): TonFeeEstimate {
+        return estimateFee(transfer.toSignedMessage(true), listOf(transfer.gift))
+    }
 
-        return api.estimateFee(message.base64(), params)
+    suspend fun estimateFee(transfers: List<WalletTransfer>): TonFeeEstimate {
+        val seqno = api.getAccountSeqno(sender)
+        val message = wallet.signedMessage(seqno, safeTimeout(), transfers, useEmptySigner = true)
+        return estimateFee(message, transfers)
+    }
+
+    private suspend fun estimateFee(message: Cell, transfers: List<WalletTransfer>): TonFeeEstimate {
+        val attached = transfers.sumOf { BigInteger.valueOf(it.coins.coins.amount.toLong()) }
+        // Headroom over the attached value, so the emulated wallet is never underfunded.
+        val balance = attached + BigInteger.valueOf(EMULATED_BALANCE)
+        val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), balance.longValueExact()))
+        val emulated = api.estimateFee(message.base64(), params)
+
+        return TonFeeEstimate(fee = emulated.totalFees, totalDebit = emulated.grossFee + attached)
     }
 
     suspend fun signedTransaction(transfer: TransferEntity, fee: BigInteger): SignedRawTonTransaction {

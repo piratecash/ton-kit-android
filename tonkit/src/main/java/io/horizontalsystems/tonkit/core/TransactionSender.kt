@@ -1,10 +1,12 @@
 package io.horizontalsystems.tonkit.core
 
+import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
+import io.horizontalsystems.tonkit.models.TonFeeEstimate
 import java.math.BigInteger
 
 class TransactionSender private constructor(
@@ -21,7 +23,7 @@ class TransactionSender private constructor(
         recipient: FriendlyAddress,
         amount: TonKit.SendAmount,
         comment: String?
-    ): BigInteger {
+    ): TonFeeEstimate {
         return rawTransactionBuilder.estimateFee(
             rawTransactionBuilder.tonTransfer(recipient, amount, comment)
         )
@@ -32,10 +34,14 @@ class TransactionSender private constructor(
         recipient: FriendlyAddress,
         amount: BigInteger,
         comment: String?
-    ): BigInteger {
+    ): TonFeeEstimate {
         return rawTransactionBuilder.estimateFee(
             rawTransactionBuilder.jettonTransfer(jettonWallet, recipient, amount, comment)
         )
+    }
+
+    suspend fun estimateFee(request: SendRequestEntity): TonFeeEstimate {
+        return rawTransactionBuilder.estimateFee(request.transfers)
     }
 
     suspend fun send(recipient: FriendlyAddress, amount: TonKit.SendAmount, comment: String?) {
@@ -61,7 +67,7 @@ class TransactionSender private constructor(
         val transfer = rawTransactionBuilder.tonTransfer(recipient, amount, comment)
         return rawTransactionBuilder.signedTransaction(
             transfer = transfer,
-            fee = rawTransactionBuilder.estimateFee(transfer),
+            fee = rawTransactionBuilder.estimateFee(transfer).fee,
         )
     }
 
@@ -74,7 +80,7 @@ class TransactionSender private constructor(
         val transfer = rawTransactionBuilder.jettonTransfer(jettonWallet, recipient, amount, comment)
         return rawTransactionBuilder.signedTransaction(
             transfer = transfer,
-            fee = rawTransactionBuilder.estimateFee(transfer),
+            fee = rawTransactionBuilder.estimateFee(transfer).fee,
         )
     }
 

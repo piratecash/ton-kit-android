@@ -2,10 +2,10 @@ package io.horizontalsystems.tonkit
 
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.Account
+import io.horizontalsystems.tonkit.models.EmulatedFee
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.JettonBalance
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
-import java.math.BigInteger
 
 internal class FixtureApi(var jettonBalances: List<JettonBalance>) : IApi {
     override suspend fun getAccount(address: Address): Account = TonV2Fixture.account
@@ -22,7 +22,7 @@ internal class FixtureApi(var jettonBalances: List<JettonBalance>) : IApi {
     override suspend fun estimateFee(
         boc: String,
         params: List<EmulateMessageToWalletRequestParamsInner>?,
-    ): BigInteger = error("Not used")
+    ): EmulatedFee = error("Not used")
 
     override suspend fun send(boc: String): Unit = error("Not used")
     override suspend fun getAccountSeqno(address: String): Int = error("Not used")

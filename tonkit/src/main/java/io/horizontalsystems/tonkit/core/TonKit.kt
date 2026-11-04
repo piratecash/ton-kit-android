@@ -20,6 +20,7 @@ import io.horizontalsystems.tonkit.models.RawMessageBroadcastResult
 import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
 import io.horizontalsystems.tonkit.models.TagQuery
 import io.horizontalsystems.tonkit.models.TagToken
+import io.horizontalsystems.tonkit.models.TonFeeEstimate
 import io.horizontalsystems.sqlcipher.room.DatabaseKeyMismatchException
 import io.horizontalsystems.sqlcipher.room.DatabaseMigrationConflictException
 import io.horizontalsystems.sqlcipher.room.DatabaseMigrationInProgressException
@@ -128,7 +129,7 @@ class TonKit internal constructor(
         recipient: FriendlyAddress,
         amount: SendAmount,
         comment: String?,
-    ): BigInteger {
+    ): TonFeeEstimate {
         return transactionSender?.estimateFee(recipient, amount, comment)
             ?: throw WalletError.WatchOnly
     }
@@ -138,9 +139,13 @@ class TonKit internal constructor(
         recipient: FriendlyAddress,
         amount: BigInteger,
         comment: String?,
-    ): BigInteger {
+    ): TonFeeEstimate {
         return transactionSender?.estimateFee(jettonWallet, recipient, amount, comment)
             ?: throw WalletError.WatchOnly
+    }
+
+    suspend fun estimateFee(request: SendRequestEntity): TonFeeEstimate {
+        return transactionSender?.estimateFee(request) ?: throw WalletError.WatchOnly
     }
 
     suspend fun send(recipient: FriendlyAddress, amount: SendAmount, comment: String?) {

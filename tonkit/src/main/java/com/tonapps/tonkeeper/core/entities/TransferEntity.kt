@@ -65,7 +65,7 @@ data class TransferEntity(
         }
 
 
-    private val gift: WalletTransfer by lazy {
+    internal val gift: WalletTransfer by lazy {
         val builder = WalletTransferBuilder()
         builder.bounceable = bounceable
         builder.sendMode = sendMode

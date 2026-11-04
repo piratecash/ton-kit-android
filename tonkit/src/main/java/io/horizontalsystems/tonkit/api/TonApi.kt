@@ -4,6 +4,7 @@ import com.tonapps.blockchain.ton.extensions.base64
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.AccountStatus
+import io.horizontalsystems.tonkit.models.EmulatedFee
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.JettonBalance
@@ -98,10 +99,18 @@ class TonApi(val network: Network, okHttpClient: OkHttpClient) : IApi {
     override suspend fun estimateFee(
         boc: String,
         params: List<EmulateMessageToWalletRequestParamsInner>?
-    ): BigInteger = withContext(Dispatchers.IO) {
+    ): EmulatedFee = withContext(Dispatchers.IO) {
         val request = EmulateMessageToWalletRequest(boc, params)
-        val result = emulationApi.emulateMessageToWallet(request)
-        BigInteger.valueOf(result.trace.transaction.totalFees)
+        val transaction = emulationApi.emulateMessageToWallet(request).trace.transaction
+        // Without a complete action phase the forwarding fees are unknown and the debit would be understated.
+        val actionPhase = checkNotNull(transaction.actionPhase) { "Emulated transaction has no action phase" }
+        check(actionPhase.success && actionPhase.skippedActions == 0) {
+            "Emulated action phase failed: code ${actionPhase.resultCode}, skipped ${actionPhase.skippedActions}"
+        }
+        EmulatedFee(
+            totalFees = BigInteger.valueOf(transaction.totalFees),
+            grossFee = BigInteger.valueOf(transaction.totalFees + actionPhase.fwdFees - actionPhase.totalFees),
+        )
     }
 
     override suspend fun send(boc: String): Unit = withContext(Dispatchers.IO) {

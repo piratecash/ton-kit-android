@@ -1,7 +1,6 @@
 package io.horizontalsystems.tonkit.core
 
 import com.tonapps.blockchain.ton.extensions.base64
-import com.tonapps.wallet.data.account.entities.MessageBodyEntity
 import com.tonapps.wallet.data.account.entities.WalletEntity
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import io.horizontalsystems.tonkit.api.TonApi
@@ -24,13 +23,7 @@ class TransactionSigner(private val api: TonApi) {
         val walletEntity = tonWallet.walletEntity(api.network)
 
         val seqno = api.getAccountSeqno(walletEntity.accountId)
-        val message = createSignedMessage(
-            walletEntity,
-            seqno,
-            getSafeValidUntil(request.validUntil),
-            request.transfers,
-            false
-        )
+        val message = walletEntity.signedMessage(seqno, getSafeValidUntil(request.validUntil), request.transfers, false)
         return message.base64()
     }
 
@@ -46,37 +39,10 @@ class TransactionSigner(private val api: TonApi) {
 
     private suspend fun emulate(request: SendRequestEntity, wallet: WalletEntity): Event {
         val seqno = api.getAccountSeqno(wallet.accountId)
-        val cell = createSignedMessage(
-            wallet,
-            seqno,
-            getSafeValidUntil(request.validUntil),
-            request.transfers,
-            true
-        )
+        val cell = wallet.signedMessage(seqno, getSafeValidUntil(request.validUntil), request.transfers, true)
 
         val emulated = api.emulate(cell, wallet.testnet)
         return Event.fromApi(emulated.event)
-    }
-
-    private fun createSignedMessage(
-        wallet: WalletEntity,
-        seqno: Int,
-        validUntil: Long,
-        transfers: List<WalletTransfer>,
-        useEmptySigner: Boolean
-    ): Cell {
-        val data = messageBody(wallet, seqno, validUntil, transfers)
-        return wallet.sign(data.seqno, data.body, useEmptySigner)
-    }
-
-    private fun messageBody(
-        wallet: WalletEntity,
-        seqno: Int,
-        validUntil: Long,
-        transfers: List<WalletTransfer>,
-    ): MessageBodyEntity {
-        val body = wallet.createBody(seqno, validUntil, transfers)
-        return MessageBodyEntity(seqno, body, validUntil)
     }
 
     private suspend fun TransactionSigner.getSafeValidUntil(validUntil: Long): Long {
@@ -94,3 +60,10 @@ class TransactionSigner(private val api: TonApi) {
     }
 
 }
+
+internal fun WalletEntity.signedMessage(
+    seqno: Int,
+    validUntil: Long,
+    transfers: List<WalletTransfer>,
+    useEmptySigner: Boolean,
+): Cell = sign(seqno, createBody(seqno, validUntil, transfers), useEmptySigner)

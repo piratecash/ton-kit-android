@@ -164,7 +164,7 @@ class SendViewModel(private val sendType: SendType) : ViewModel() {
                     }
 
                     ensureActive()
-                    fee = estimateFee.toBigDecimal(9)
+                    fee = estimateFee.fee.toBigDecimal(9)
                 } catch (_: CancellationException) {
                 } catch (e: Throwable) {
                     feeError = e

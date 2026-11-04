@@ -3,6 +3,7 @@ package io.horizontalsystems.tonkit.core
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.Account
+import io.horizontalsystems.tonkit.models.EmulatedFee
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.JettonBalance
@@ -474,9 +475,9 @@ internal class FakeApi(
     override suspend fun estimateFee(
         boc: String,
         params: List<EmulateMessageToWalletRequestParamsInner>?,
-    ): BigInteger {
+    ): EmulatedFee {
         guard()
-        return BigInteger.ZERO
+        return EmulatedFee(BigInteger.ZERO, BigInteger.ZERO)
     }
 
     override suspend fun getAccount(address: Address): Account = error("Not used")
