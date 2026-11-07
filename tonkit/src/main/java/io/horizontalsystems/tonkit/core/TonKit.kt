@@ -21,6 +21,7 @@ import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
 import io.horizontalsystems.tonkit.models.TagQuery
 import io.horizontalsystems.tonkit.models.TagToken
 import io.horizontalsystems.tonkit.models.TonFeeEstimate
+import io.horizontalsystems.databasenaming.DatabaseNameResolver
 import io.horizontalsystems.sqlcipher.room.DatabaseKeyMismatchException
 import io.horizontalsystems.sqlcipher.room.DatabaseMigrationConflictException
 import io.horizontalsystems.sqlcipher.room.DatabaseMigrationInProgressException
@@ -29,7 +30,7 @@ import io.horizontalsystems.sqlcipher.room.DatabaseMigrationResult
 import io.horizontalsystems.sqlcipher.room.InsufficientDatabaseMigrationSpaceException
 import io.horizontalsystems.tonkit.storage.KitDatabase
 import io.horizontalsystems.tonkit.storage.databaseFile
-import io.horizontalsystems.tonkit.storage.kitDatabaseName
+import io.horizontalsystems.tonkit.storage.resolvedKitDatabaseName
 import io.horizontalsystems.tonkit.storage.requireValidDatabaseKey
 import io.horizontalsystems.tonkit.storage.requireValidKitDatabase
 import io.horizontalsystems.tonkit.storage.tonKitNamespace
@@ -344,13 +345,15 @@ class TonKit internal constructor(
             walletId: String,
             databaseKey: ByteArray,
             httpClient: TonHttpClient,
+            nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
         ): TonKit {
             requireValidKitDatabase(walletId, network)
             requireValidDatabaseKey(databaseKey)
             val address = tonWallet.address(network)
+            val databaseName = resolvedKitDatabaseName(walletId, network, nameResolver)
 
             val database = tonKitNamespace.open {
-                KitDatabase.getInstance(context, kitDatabaseName(walletId, network), databaseKey)
+                KitDatabase.getInstance(context, databaseName, databaseKey, nameResolver)
             }
             val accountDao = database.accountDao()
             val jettonDao = database.jettonDao()
@@ -405,10 +408,12 @@ class TonKit internal constructor(
             network: Network,
             walletId: String,
             databaseKey: ByteArray,
+            nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
         ): DatabaseMigrationResult {
             requireValidKitDatabase(walletId, network)
             requireValidDatabaseKey(databaseKey)
-            return tonKitNamespace.migrate(databaseFile(context, kitDatabaseName(walletId, network)), databaseKey)
+            val file = databaseFile(context, resolvedKitDatabaseName(walletId, network, nameResolver))
+            return tonKitNamespace.migrate(file, databaseKey, nameResolver)
         }
 
         /**
@@ -417,9 +422,15 @@ class TonKit internal constructor(
          * [DatabaseMigrationConflictException] while another process migrates or clears it; retry later.
          * Stop the kit first.
          */
-        suspend fun clear(context: PlatformContext, network: Network, walletId: String) {
+        suspend fun clear(
+            context: PlatformContext,
+            network: Network,
+            walletId: String,
+            nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
+        ) {
             requireValidKitDatabase(walletId, network)
-            tonKitNamespace.clear(databaseFile(context, kitDatabaseName(walletId, network)))
+            val file = databaseFile(context, resolvedKitDatabaseName(walletId, network, nameResolver))
+            tonKitNamespace.clear(file, nameResolver)
         }
 
         fun getTonApi(network: Network, apiKeys: List<String> = emptyList()) =

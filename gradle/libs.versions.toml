@@ -22,6 +22,8 @@ ksp = "2.3.2"
 kermit = "2.1.0"
 coroutines = "1.10.2"
 piratecashBitcoin = "v0.1.0-pcash.36"
+# The naming contract is a plain jar published with bitcoin-kit; sqlcipher stays on piratecashBitcoin.
+databaseNaming = "v0.1.0-pcash.47"
 # Aligned with the SQLCipher that sqlcipher-room pulls in on Android.
 sqlcipherAndroid = "4.17.0"
 orgJson = "20250517"
@@ -72,6 +74,7 @@ kermit-test = { module = "co.touchlab:kermit-test", version.ref = "kermit" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 org-json = { module = "org.json:json", version.ref = "orgJson" }
+database-naming = { module = "com.github.piratecash.bitcoin-kit-android:database-naming", version.ref = "databaseNaming" }
 sqlcipher-room = { module = "com.github.piratecash.bitcoin-kit-android:sqlcipher-room", version.ref = "piratecashBitcoin" }
 sqlcipher-driver = { module = "com.github.piratecash.bitcoin-kit-android:sqlcipher-driver", version.ref = "piratecashBitcoin" }
 sqlcipher-android = { module = "net.zetetic:sqlcipher-android", version.ref = "sqlcipherAndroid" }

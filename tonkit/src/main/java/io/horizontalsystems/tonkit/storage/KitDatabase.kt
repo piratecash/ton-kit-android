@@ -6,6 +6,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import io.horizontalsystems.databasenaming.DatabaseNameResolver
 import io.horizontalsystems.tonkit.PlatformContext
 import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.Event
@@ -53,8 +54,13 @@ abstract class KitDatabase : RoomDatabase() {
             }
         }
 
-        internal fun getInstance(context: PlatformContext, name: String, databaseKey: ByteArray): KitDatabase {
-            return kitDatabaseBuilder(context, name, databaseKey).kitSchemaPolicy().build()
+        internal fun getInstance(
+            context: PlatformContext,
+            name: String,
+            databaseKey: ByteArray,
+            nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
+        ): KitDatabase {
+            return kitDatabaseBuilder(context, name, databaseKey, nameResolver).kitSchemaPolicy().build()
         }
     }
 }

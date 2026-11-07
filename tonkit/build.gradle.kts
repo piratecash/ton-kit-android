@@ -57,6 +57,7 @@ kotlin {
                 implementation(libs.androidx.room.ktx)
                 // Public API exposes its exceptions and DatabaseMigrationResult.
                 api(libs.sqlcipher.room)
+                api(libs.database.naming)
             }
         }
         val desktopMain by getting {
@@ -64,6 +65,7 @@ kotlin {
             dependsOn(jvmCommonMain)
             dependencies {
                 api(libs.sqlcipher.room)
+                api(libs.database.naming)
                 // Android ships org.json in the platform.
                 implementation(libs.org.json)
             }
