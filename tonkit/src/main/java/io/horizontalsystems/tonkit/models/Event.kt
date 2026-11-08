@@ -131,6 +131,23 @@ data class Event(
                         )
                     )
                 }
+
+                Action.Type.LiquidityDeposit -> {
+                    val deposit = action.liquidityDeposit ?: continue
+                    if (deposit.from.address != address) continue
+
+                    deposit.tokens.forEach { token ->
+                        val jetton = token.jetton
+                        tags.add(
+                            Tag(
+                                id,
+                                Tag.Type.Outgoing,
+                                if (jetton == null) Tag.Platform.Native else Tag.Platform.Jetton,
+                                jetton?.address
+                            )
+                        )
+                    }
+                }
                 else -> Unit
             }
         }

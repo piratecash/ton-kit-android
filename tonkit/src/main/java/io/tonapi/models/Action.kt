@@ -45,6 +45,7 @@ import com.squareup.moshi.JsonClass
  * @param domainRenew 
  * @param inscriptionTransfer 
  * @param inscriptionMint 
+ * @param liquidityDeposit 
  */
 
 
@@ -120,14 +121,17 @@ data class Action (
     val inscriptionTransfer: InscriptionTransferAction? = null,
 
     @Json(name = "InscriptionMint")
-    val inscriptionMint: InscriptionMintAction? = null
+    val inscriptionMint: InscriptionMintAction? = null,
+
+    @Json(name = "LiquidityDeposit")
+    val liquidityDeposit: LiquidityDepositAction? = null
 
 ) {
 
     /**
      * 
      *
-     * Values: TonTransfer,JettonTransfer,JettonBurn,JettonMint,NftItemTransfer,ContractDeploy,Subscribe,UnSubscribe,AuctionBid,NftPurchase,DepositStake,WithdrawStake,WithdrawStakeRequest,JettonSwap,SmartContractExec,ElectionsRecoverStake,ElectionsDepositStake,DomainRenew,InscriptionTransfer,InscriptionMint,Unknown
+     * Values: TonTransfer,JettonTransfer,JettonBurn,JettonMint,NftItemTransfer,ContractDeploy,Subscribe,UnSubscribe,AuctionBid,NftPurchase,DepositStake,WithdrawStake,WithdrawStakeRequest,JettonSwap,SmartContractExec,ElectionsRecoverStake,ElectionsDepositStake,DomainRenew,InscriptionTransfer,InscriptionMint,LiquidityDeposit,Unknown
      */
     @JsonClass(generateAdapter = false)
     enum class Type(val value: kotlin.String) {
@@ -151,6 +155,7 @@ data class Action (
         @Json(name = "DomainRenew") DomainRenew("DomainRenew"),
         @Json(name = "InscriptionTransfer") InscriptionTransfer("InscriptionTransfer"),
         @Json(name = "InscriptionMint") InscriptionMint("InscriptionMint"),
+        @Json(name = "LiquidityDeposit") LiquidityDeposit("LiquidityDeposit"),
         @Json(name = "Unknown") Unknown("Unknown"),
         @Json(name = "unknown_default_open_api") unknown_default_open_api("unknown_default_open_api");
     }
