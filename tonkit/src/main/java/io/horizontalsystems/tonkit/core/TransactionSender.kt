@@ -40,6 +40,16 @@ class TransactionSender private constructor(
         )
     }
 
+    suspend fun estimateFee(
+        nft: Address,
+        recipient: FriendlyAddress,
+        comment: String?,
+    ): TonFeeEstimate {
+        return rawTransactionBuilder.estimateFee(
+            rawTransactionBuilder.nftTransfer(nft, recipient, comment)
+        )
+    }
+
     suspend fun estimateFee(request: SendRequestEntity): TonFeeEstimate {
         return rawTransactionBuilder.estimateFee(request.transfers)
     }
@@ -56,6 +66,15 @@ class TransactionSender private constructor(
         comment: String?
     ) {
         val transfer = rawTransactionBuilder.jettonTransfer(jettonWallet, recipient, amount, comment)
+        api.send(rawTransactionBuilder.signedTransaction(transfer).bocBase64)
+    }
+
+    suspend fun send(
+        nft: Address,
+        recipient: FriendlyAddress,
+        comment: String?,
+    ) {
+        val transfer = rawTransactionBuilder.nftTransfer(nft, recipient, comment)
         api.send(rawTransactionBuilder.signedTransaction(transfer).bocBase64)
     }
 

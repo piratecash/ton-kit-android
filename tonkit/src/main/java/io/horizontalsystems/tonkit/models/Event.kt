@@ -22,58 +22,23 @@ data class Event(
             when (action.type) {
                 Action.Type.TonTransfer -> {
                     val tonTransfer = action.tonTransfer ?: continue
-
-                    if (tonTransfer.sender.address == address) {
-                        tags.add(
-                            Tag(
-                                id,
-                                Tag.Type.Outgoing,
-                                Tag.Platform.Native,
-                                addresses = listOf(tonTransfer.recipient.address)
-                            )
-                        )
-                    }
-
-                    if (tonTransfer.recipient.address == address) {
-                        tags.add(
-                            Tag(
-                                id,
-                                Tag.Type.Incoming,
-                                Tag.Platform.Native,
-                                addresses = listOf(tonTransfer.sender.address)
-                            )
-                        )
-                    }
+                    tags += transferTags(address, tonTransfer.sender, tonTransfer.recipient, Tag.Platform.Native)
                 }
 
                 Action.Type.JettonTransfer -> {
                     val jettonTransfer = action.jettonTransfer ?: continue
-                    val sender = jettonTransfer.sender
-                    val recipient = jettonTransfer.recipient
+                    tags += transferTags(
+                        address,
+                        jettonTransfer.sender,
+                        jettonTransfer.recipient,
+                        Tag.Platform.Jetton,
+                        jettonTransfer.jetton.address,
+                    )
+                }
 
-                    if (sender?.address == address) {
-                        tags.add(
-                            Tag(
-                                id,
-                                Tag.Type.Outgoing,
-                                Tag.Platform.Jetton,
-                                jettonTransfer.jetton.address,
-                                listOfNotNull(recipient?.address)
-                            )
-                        )
-                    }
-
-                    if (recipient?.address == address) {
-                        tags.add(
-                            Tag(
-                                id,
-                                Tag.Type.Incoming,
-                                Tag.Platform.Jetton,
-                                jettonTransfer.jetton.address,
-                                listOfNotNull(sender?.address)
-                            )
-                        )
-                    }
+                Action.Type.NftTransfer -> {
+                    val nftTransfer = action.nftTransfer ?: continue
+                    tags += transferTags(address, nftTransfer.sender, nftTransfer.recipient, Tag.Platform.Native)
                 }
 
                 Action.Type.JettonBurn -> {
@@ -153,6 +118,21 @@ data class Event(
         }
 
         return tags
+    }
+
+    private fun transferTags(
+        address: Address,
+        sender: AccountAddress?,
+        recipient: AccountAddress?,
+        platform: Tag.Platform,
+        jettonAddress: Address? = null,
+    ): List<Tag> = buildList {
+        if (sender?.address == address) {
+            add(Tag(id, Tag.Type.Outgoing, platform, jettonAddress, listOfNotNull(recipient?.address)))
+        }
+        if (recipient?.address == address) {
+            add(Tag(id, Tag.Type.Incoming, platform, jettonAddress, listOfNotNull(sender?.address)))
+        }
     }
 
     companion object {

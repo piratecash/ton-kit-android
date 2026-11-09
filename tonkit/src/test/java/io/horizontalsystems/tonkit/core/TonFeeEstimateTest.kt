@@ -28,7 +28,9 @@ class TonFeeEstimateTest {
     private val wallet = TonWallet.FullAccess(publicKey, hashSigner, TonWalletVersion.V4R2)
     private val recipient = FriendlyAddress(AddrStd.parse("0:" + "2f".repeat(32)), isBounceable = false)
     private val jettonWallet = Address.parse("0:" + "3c".repeat(32))
+    private val nft = Address.parse("0:" + "4d".repeat(32))
     private val emulateRequests = mutableListOf<String>()
+    private val account = """{"address":"0:${"11".repeat(32)}","is_scam":false,"is_wallet":true}"""
 
     @Test
     fun estimateFee_jettonTransfer_debitsGrossFeePlusTransferPrice() = runBlocking {
@@ -76,6 +78,28 @@ class TonFeeEstimateTest {
         assertTrue(JSONObject(emulateRequests.single()).getString("boc").isNotEmpty())
     }
 
+    @Test
+    fun estimateFee_nftTransfer_reportsWholeTraceFeeAndDebitsGrossFeePlusAttached() = runBlocking {
+        val estimate = sender(trace(actionPhase(), children = nestedTrace())).estimateFee(nft, recipient, "hi")
+
+        assertEquals(
+            TonFeeEstimate(fee = (TOTAL_FEES + NESTED_FEES).big(), totalDebit = (GROSS_FEE + NFT_ATTACHED).big()),
+            estimate,
+        )
+        assertEquals(NFT_ATTACHED + EMULATED_BALANCE, emulatedBalance())
+    }
+
+    @Test
+    fun estimateFee_coinAndJettonNestedTrace_reportOnlyWalletTransactionFee() = runBlocking {
+        val nested = trace(actionPhase(), children = nestedTrace())
+
+        val coin = sender(nested).estimateFee(recipient, TonKit.SendAmount.Max, null)
+        val jetton = sender(nested).estimateFee(jettonWallet, recipient, BigInteger.TEN, "hi")
+
+        assertEquals(TOTAL_FEES.big(), coin.fee)
+        assertEquals(TOTAL_FEES.big(), jetton.fee)
+    }
+
     private fun assertActionPhaseRejected(trace: String) {
         val error = assertThrows(IllegalStateException::class.java) {
             runBlocking { sender(trace).estimateFee(jettonWallet, recipient, BigInteger.TEN, null) }
@@ -98,17 +122,25 @@ class TonFeeEstimateTest {
             """"fwd_fees":$ACTION_FWD_FEES,"total_fees":$ACTION_TOTAL_FEES}"""
 
     // tonapi leaves end_balance at 0 in emulations, so the debit cannot come from it.
-    private fun trace(actionPhase: String?): String {
-        val account = """{"address":"0:${"11".repeat(32)}","is_scam":false,"is_wallet":true}"""
-        val phase = actionPhase?.let { ""","action_phase":$it""" }.orEmpty()
-        return """{"trace":{"transaction":{"hash":"h","lt":1,"account":$account,"success":true,"utime":1,""" +
-            """"orig_status":"active","end_status":"active","total_fees":$TOTAL_FEES,"end_balance":0,""" +
-            """"transaction_type":"TransOrd","state_update_old":"","state_update_new":"","out_msgs":[],""" +
-            """"block":"","aborted":false,"destroyed":false,"raw":""$phase},"interfaces":[]},""" +
+    private fun trace(actionPhase: String?, children: List<String> = emptyList()): String =
+        """{"trace":${traceNode(TOTAL_FEES, actionPhase, children)},""" +
             """"risk":{"transfer_all_remaining_balance":false,"ton":0,"jettons":[],"nfts":[]},""" +
             """"event":{"event_id":"e","account":$account,"timestamp":1,"actions":[],"is_scam":false,"lt":1,""" +
             """"in_progress":false,"extra":0}}"""
+
+    private fun traceNode(fees: Long, actionPhase: String? = null, children: List<String> = emptyList()): String {
+        val phase = actionPhase?.let { ""","action_phase":$it""" }.orEmpty()
+        val nested = if (children.isEmpty()) "" else ""","children":[${children.joinToString(",")}]"""
+        return """{"transaction":{"hash":"h","lt":1,"account":$account,"success":true,"utime":1,""" +
+            """"orig_status":"active","end_status":"active","total_fees":$fees,"end_balance":0,""" +
+            """"transaction_type":"TransOrd","state_update_old":"","state_update_new":"","out_msgs":[],""" +
+            """"block":"","aborted":false,"destroyed":false,"raw":""$phase},"interfaces":[]$nested}"""
     }
+
+    private fun nestedTrace() = listOf(
+        traceNode(NFT_CONTRACT_FEES, children = listOf(traceNode(NOTIFICATION_FEES))),
+        traceNode(EXCESS_FEES),
+    )
 
     private fun Long.big(): BigInteger = BigInteger.valueOf(this)
 
@@ -121,5 +153,10 @@ class TonFeeEstimateTest {
         const val GROSS_FEE = TOTAL_FEES + ACTION_FWD_FEES - ACTION_TOTAL_FEES
         const val JETTON_TRANSFER_PRICE = 64_000_000L
         const val EMULATED_BALANCE = 1_000_000_000L
+        const val NFT_ATTACHED = 50_000_000L
+        const val NFT_CONTRACT_FEES = 700_000L
+        const val NOTIFICATION_FEES = 90_000L
+        const val EXCESS_FEES = 5_000L
+        const val NESTED_FEES = NFT_CONTRACT_FEES + NOTIFICATION_FEES + EXCESS_FEES
     }
 }

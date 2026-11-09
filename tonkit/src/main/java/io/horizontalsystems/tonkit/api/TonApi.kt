@@ -2,6 +2,7 @@ package io.horizontalsystems.tonkit.api
 
 import com.tonapps.blockchain.ton.extensions.base64
 import io.horizontalsystems.tonkit.Address
+import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.AccountStatus
 import io.horizontalsystems.tonkit.models.EmulatedFee
@@ -15,6 +16,7 @@ import io.horizontalsystems.tonkit.models.Network.TestNet
 import io.horizontalsystems.tonkit.models.NftItem
 import io.tonapi.apis.AccountsApi
 import io.tonapi.apis.BlockchainApi
+import io.tonapi.apis.DNSApi
 import io.tonapi.apis.EmulationApi
 import io.tonapi.apis.JettonsApi
 import io.tonapi.apis.LiteServerApi
@@ -24,6 +26,7 @@ import io.tonapi.models.EmulateMessageToWalletRequest
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
 import io.tonapi.models.MessageConsequences
 import io.tonapi.models.SendBlockchainMessageRequest
+import io.tonapi.models.Trace
 import io.tonapi.infrastructure.ClientException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -44,6 +47,7 @@ class TonApi(val network: Network, okHttpClient: OkHttpClient) : IApi {
     val emulationApi = EmulationApi(basePath, okHttpClient)
     private val blockchainApi = BlockchainApi(basePath, okHttpClient)
     private val nftApi = NFTApi(basePath, okHttpClient)
+    private val dnsApi = DNSApi(basePath, okHttpClient)
 
     override suspend fun getAccount(address: Address): Account = withContext(Dispatchers.IO) {
         val account = accountsApi.getAccount(address.toRaw())
@@ -105,7 +109,8 @@ class TonApi(val network: Network, okHttpClient: OkHttpClient) : IApi {
         params: List<EmulateMessageToWalletRequestParamsInner>?
     ): EmulatedFee = withContext(Dispatchers.IO) {
         val request = EmulateMessageToWalletRequest(boc, params)
-        val transaction = emulationApi.emulateMessageToWallet(request).trace.transaction
+        val trace = emulationApi.emulateMessageToWallet(request).trace
+        val transaction = trace.transaction
         // Without a complete action phase the forwarding fees are unknown and the debit would be understated.
         val actionPhase = checkNotNull(transaction.actionPhase) { "Emulated transaction has no action phase" }
         check(actionPhase.success && actionPhase.skippedActions == 0) {
@@ -114,8 +119,12 @@ class TonApi(val network: Network, okHttpClient: OkHttpClient) : IApi {
         EmulatedFee(
             totalFees = BigInteger.valueOf(transaction.totalFees),
             grossFee = BigInteger.valueOf(transaction.totalFees + actionPhase.fwdFees - actionPhase.totalFees),
+            traceFees = BigInteger.valueOf(trace.feesWithChildren()),
         )
     }
+
+    private fun Trace.feesWithChildren(): Long =
+        transaction.totalFees + children.orEmpty().sumOf { it.feesWithChildren() }
 
     override suspend fun send(boc: String): Unit = withContext(Dispatchers.IO) {
         val request = SendBlockchainMessageRequest(boc)
@@ -150,6 +159,16 @@ class TonApi(val network: Network, okHttpClient: OkHttpClient) : IApi {
         withContext(Dispatchers.IO) {
             accountsApi.getAccountDnsExpiring(address.toRaw(), period).items.map(DnsExpiringItem.Companion::fromApi)
         }
+
+    override fun resolveDomain(domain: String): FriendlyAddress? {
+        val record = try {
+            dnsApi.dnsResolve(domain)
+        } catch (error: ClientException) {
+            if (error.statusCode == 404) return null
+            throw error
+        }
+        return record.wallet?.let { FriendlyAddress.parse(it.address) }
+    }
 
     suspend fun emulate(
         boc: String,

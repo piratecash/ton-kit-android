@@ -1,6 +1,7 @@
 package io.horizontalsystems.tonkit.models
 
 import io.horizontalsystems.tonkit.Address
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -89,6 +90,47 @@ class EventTagsTest {
         assertNoTagOfType(tags, Tag.Type.Swap)
     }
 
+    @Test
+    fun tags_nftTransferFromUser_producesOutgoingNativeTagWithRecipient() {
+        val tags = eventOf(nftTransferAction(accountAddress(userAddress), accountAddress(counterpartyAddress)))
+            .tags(userAddress)
+
+        assertEquals(listOf(nativeTag(Tag.Type.Outgoing, counterpartyAddress)), tags)
+    }
+
+    @Test
+    fun tags_nftTransferToUser_producesIncomingNativeTagWithSender() {
+        val tags = eventOf(nftTransferAction(accountAddress(counterpartyAddress), accountAddress(userAddress)))
+            .tags(userAddress)
+
+        assertEquals(listOf(nativeTag(Tag.Type.Incoming, counterpartyAddress)), tags)
+    }
+
+    @Test
+    fun tags_nftTransferUnknownRecipient_producesOutgoingTagWithoutCounterparty() {
+        val tags = eventOf(nftTransferAction(accountAddress(userAddress), recipient = null)).tags(userAddress)
+
+        assertEquals(listOf(nativeTag(Tag.Type.Outgoing)), tags)
+    }
+
+    @Test
+    fun tags_nftTransferUnknownSender_producesIncomingTagWithoutCounterparty() {
+        val tags = eventOf(nftTransferAction(sender = null, accountAddress(userAddress))).tags(userAddress)
+
+        assertEquals(listOf(nativeTag(Tag.Type.Incoming)), tags)
+    }
+
+    @Test
+    fun tags_nftTransferBetweenOtherAccounts_producesNoTags() {
+        val tags = eventOf(nftTransferAction(accountAddress(counterpartyAddress), accountAddress(routerAddress)))
+            .tags(userAddress)
+
+        assertEquals(emptyList<Tag>(), tags)
+    }
+
+    private fun nativeTag(type: Tag.Type, vararg counterparties: Address) =
+        Tag("event-id", type, Tag.Platform.Native, addresses = counterparties.toList())
+
     private fun assertContainsTag(
         tags: List<Tag>,
         type: Tag.Type,
@@ -168,6 +210,19 @@ class EventTagsTest {
         contractDeploy = null,
         jettonSwap = null,
         smartContractExec = null,
+    )
+
+    private fun nftTransferAction(sender: AccountAddress?, recipient: AccountAddress?) = Action(
+        type = Action.Type.NftTransfer,
+        status = Action.Status.OK,
+        tonTransfer = null,
+        jettonTransfer = null,
+        jettonBurn = null,
+        jettonMint = null,
+        contractDeploy = null,
+        jettonSwap = null,
+        smartContractExec = null,
+        nftTransfer = NftTransfer(nft = routerAddress, sender = sender, recipient = recipient, comment = null),
     )
 
     private fun jettonTransferAction(

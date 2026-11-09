@@ -33,4 +33,5 @@ internal class FixtureApi(var jettonBalances: List<JettonBalance>) : IApi {
     override suspend fun getAccountNftItems(address: Address, limit: Int): List<NftItem> = error("Not used")
     override suspend fun getNftItem(address: Address): NftItem = error("Not used")
     override suspend fun getDnsExpiring(address: Address, period: Int): List<DnsExpiringItem> = error("Not used")
+    override fun resolveDomain(domain: String): FriendlyAddress? = error("Not used")
 }

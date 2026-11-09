@@ -8,8 +8,12 @@ data class TonFeeEstimate(
     val totalDebit: BigInteger,
 )
 
-/** [grossFee] adds the forwarding fees charged on top of [totalFees]; neither includes the attached value. */
+/**
+ * [grossFee] adds the forwarding fees charged on top of [totalFees]; neither includes the attached value.
+ * [traceFees] sums the fees of every transaction in the emulated trace.
+ */
 data class EmulatedFee(
     val totalFees: BigInteger,
     val grossFee: BigInteger,
+    val traceFees: BigInteger,
 )

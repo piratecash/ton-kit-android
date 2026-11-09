@@ -1,6 +1,7 @@
 package io.horizontalsystems.tonkit.api
 
 import io.horizontalsystems.tonkit.Address
+import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.EmulatedFee
 import io.horizontalsystems.tonkit.models.Event
@@ -29,4 +30,5 @@ interface IApi {
     suspend fun getAccountNftItems(address: Address, limit: Int): List<NftItem>
     suspend fun getNftItem(address: Address): NftItem
     suspend fun getDnsExpiring(address: Address, period: Int): List<DnsExpiringItem>
+    fun resolveDomain(domain: String): FriendlyAddress?
 }

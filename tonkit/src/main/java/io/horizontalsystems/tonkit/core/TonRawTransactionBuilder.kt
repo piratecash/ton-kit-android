@@ -64,8 +64,30 @@ internal class TonRawTransactionBuilder(
         )
     }
 
+    suspend fun nftTransfer(
+        nft: Address,
+        recipient: FriendlyAddress,
+        comment: String?,
+        seqno: Int? = null,
+        validUntil: Long? = null,
+    ): TransferEntity {
+        return transfer(
+            value = BigInteger.valueOf(NFT_TRANSFER_ATTACHED),
+            isMax = false,
+            recipient = recipient,
+            comment = comment,
+            walletAddress = sender.toRaw(),
+            isTon = true,
+            seqno = seqno,
+            validUntil = validUntil,
+            nftAddress = nft.toRaw(),
+            // The message goes to the NFT contract, not the recipient: a failure must bounce the TON back.
+            bounceable = true,
+        )
+    }
+
     suspend fun estimateFee(transfer: TransferEntity): TonFeeEstimate {
-        return estimateFee(transfer.toSignedMessage(true), listOf(transfer.gift))
+        return estimateFee(transfer.toSignedMessage(true), listOf(transfer.gift), wholeTrace = transfer.isNft)
     }
 
     suspend fun estimateFee(transfers: List<WalletTransfer>): TonFeeEstimate {
@@ -74,14 +96,19 @@ internal class TonRawTransactionBuilder(
         return estimateFee(message, transfers)
     }
 
-    private suspend fun estimateFee(message: Cell, transfers: List<WalletTransfer>): TonFeeEstimate {
+    private suspend fun estimateFee(
+        message: Cell,
+        transfers: List<WalletTransfer>,
+        wholeTrace: Boolean = false,
+    ): TonFeeEstimate {
         val attached = transfers.sumOf { BigInteger.valueOf(it.coins.coins.amount.toLong()) }
         // Headroom over the attached value, so the emulated wallet is never underfunded.
         val balance = attached + BigInteger.valueOf(EMULATED_BALANCE)
         val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), balance.longValueExact()))
         val emulated = api.estimateFee(message.base64(), params)
 
-        return TonFeeEstimate(fee = emulated.totalFees, totalDebit = emulated.grossFee + attached)
+        val fee = if (wholeTrace) emulated.traceFees else emulated.totalFees
+        return TonFeeEstimate(fee = fee, totalDebit = emulated.grossFee + attached)
     }
 
     suspend fun signedTransaction(transfer: TransferEntity, fee: BigInteger): SignedRawTonTransaction {
@@ -121,6 +148,8 @@ internal class TonRawTransactionBuilder(
         isTon: Boolean,
         seqno: Int? = null,
         validUntil: Long? = null,
+        nftAddress: String? = null,
+        bounceable: Boolean = recipient.isBounceable,
     ): TransferEntity {
         // Explicit seqno/validUntil enable offline building: with both provided
         // no network call is made on this path.
@@ -132,10 +161,11 @@ internal class TonRawTransactionBuilder(
             .setAmount(Coins.of(value.toBigDecimal(Coins.DEFAULT_DECIMALS)))
             .setMax(isMax)
             .setDestination(recipient.addrStd)
-            .setBounceable(recipient.isBounceable)
+            .setBounceable(bounceable)
             .setComment(comment)
             .setValidUntil(resolvedValidUntil)
             .setToken(BalanceEntity(isTon, walletAddress))
+            .apply { nftAddress?.let { setNftAddress(it) } }
             .build()
     }
 
@@ -163,6 +193,7 @@ internal class TonRawTransactionBuilder(
         private const val DEFAULT_TTL_SECONDS = 5 * 60L
         private const val MILLIS_IN_SECOND = 1000L
         private const val EMULATED_BALANCE = 1_000_000_000L
+        private const val NFT_TRANSFER_ATTACHED = 50_000_000L
     }
 }
 

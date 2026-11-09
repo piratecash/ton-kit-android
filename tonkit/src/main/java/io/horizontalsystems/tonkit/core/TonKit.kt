@@ -132,6 +132,9 @@ class TonKit internal constructor(
 
     suspend fun dnsExpiring(period: Int): List<DnsExpiringItem> = api.getDnsExpiring(address, period)
 
+    /** Blocking network call: run off the main thread. */
+    fun resolveDomain(domain: String): FriendlyAddress? = api.resolveDomain(domain)
+
     suspend fun tagTokens(): List<TagToken> {
         return eventManager.tagTokens()
     }
@@ -155,6 +158,15 @@ class TonKit internal constructor(
             ?: throw WalletError.WatchOnly
     }
 
+    suspend fun estimateNftTransferFee(
+        nft: Address,
+        recipient: FriendlyAddress,
+        comment: String?,
+    ): TonFeeEstimate {
+        return transactionSender?.estimateFee(nft, recipient, comment)
+            ?: throw WalletError.WatchOnly
+    }
+
     suspend fun estimateFee(request: SendRequestEntity): TonFeeEstimate {
         return transactionSender?.estimateFee(request) ?: throw WalletError.WatchOnly
     }
@@ -170,6 +182,15 @@ class TonKit internal constructor(
         comment: String?,
     ) {
         transactionSender?.send(jettonWallet, recipient, amount, comment)
+            ?: throw WalletError.WatchOnly
+    }
+
+    suspend fun sendNftTransfer(
+        nft: Address,
+        recipient: FriendlyAddress,
+        comment: String?,
+    ) {
+        transactionSender?.send(nft, recipient, comment)
             ?: throw WalletError.WatchOnly
     }
 

@@ -1,6 +1,7 @@
 package io.horizontalsystems.tonkit.core
 
 import io.horizontalsystems.tonkit.Address
+import io.horizontalsystems.tonkit.FriendlyAddress
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.DnsExpiringItem
@@ -479,7 +480,7 @@ internal class FakeApi(
         params: List<EmulateMessageToWalletRequestParamsInner>?,
     ): EmulatedFee {
         guard()
-        return EmulatedFee(BigInteger.ZERO, BigInteger.ZERO)
+        return EmulatedFee(BigInteger.ZERO, BigInteger.ZERO, BigInteger.ZERO)
     }
 
     override suspend fun getAccount(address: Address): Account = error("Not used")
@@ -498,6 +499,7 @@ internal class FakeApi(
     override suspend fun getAccountNftItems(address: Address, limit: Int): List<NftItem> = error("Not used")
     override suspend fun getNftItem(address: Address): NftItem = error("Not used")
     override suspend fun getDnsExpiring(address: Address, period: Int): List<DnsExpiringItem> = error("Not used")
+    override fun resolveDomain(domain: String): FriendlyAddress? = error("Not used")
 
     override suspend fun getRawTime(): Int {
         guard()
