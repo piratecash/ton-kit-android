@@ -3,10 +3,12 @@ package io.horizontalsystems.tonkit.core
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.Account
+import io.horizontalsystems.tonkit.models.DnsExpiringItem
 import io.horizontalsystems.tonkit.models.EmulatedFee
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.JettonBalance
+import io.horizontalsystems.tonkit.models.NftItem
 import io.horizontalsystems.tonkit.models.RawMessageBroadcastMetadata
 import io.horizontalsystems.tonkit.models.RawMessageBroadcastStatus
 import io.horizontalsystems.tonkit.storage.RawMessageBroadcastDao
@@ -492,6 +494,10 @@ internal class FakeApi(
     ): List<Event> = error("Not used")
 
     override suspend fun getJettonInfo(address: Address): Jetton = error("Not used")
+
+    override suspend fun getAccountNftItems(address: Address, limit: Int): List<NftItem> = error("Not used")
+    override suspend fun getNftItem(address: Address): NftItem = error("Not used")
+    override suspend fun getDnsExpiring(address: Address, period: Int): List<DnsExpiringItem> = error("Not used")
 
     override suspend fun getRawTime(): Int {
         guard()

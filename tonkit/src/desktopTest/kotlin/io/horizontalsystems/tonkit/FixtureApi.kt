@@ -2,9 +2,11 @@ package io.horizontalsystems.tonkit
 
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.Account
+import io.horizontalsystems.tonkit.models.DnsExpiringItem
 import io.horizontalsystems.tonkit.models.EmulatedFee
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.JettonBalance
+import io.horizontalsystems.tonkit.models.NftItem
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
 
 internal class FixtureApi(var jettonBalances: List<JettonBalance>) : IApi {
@@ -27,4 +29,8 @@ internal class FixtureApi(var jettonBalances: List<JettonBalance>) : IApi {
     override suspend fun send(boc: String): Unit = error("Not used")
     override suspend fun getAccountSeqno(address: String): Int = error("Not used")
     override suspend fun transactionExistsByMessageHash(messageHash: String): Boolean = error("Not used")
+
+    override suspend fun getAccountNftItems(address: Address, limit: Int): List<NftItem> = error("Not used")
+    override suspend fun getNftItem(address: Address): NftItem = error("Not used")
+    override suspend fun getDnsExpiring(address: Address, period: Int): List<DnsExpiringItem> = error("Not used")
 }

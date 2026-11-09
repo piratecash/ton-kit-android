@@ -5,7 +5,9 @@ import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.EmulatedFee
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.Jetton
+import io.horizontalsystems.tonkit.models.DnsExpiringItem
 import io.horizontalsystems.tonkit.models.JettonBalance
+import io.horizontalsystems.tonkit.models.NftItem
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
 
 interface IApi {
@@ -24,4 +26,7 @@ interface IApi {
     suspend fun send(boc: String)
     suspend fun getAccountSeqno(address: String): Int
     suspend fun transactionExistsByMessageHash(messageHash: String): Boolean
+    suspend fun getAccountNftItems(address: Address, limit: Int): List<NftItem>
+    suspend fun getNftItem(address: Address): NftItem
+    suspend fun getDnsExpiring(address: Address, period: Int): List<DnsExpiringItem>
 }

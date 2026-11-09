@@ -2,6 +2,7 @@ package io.horizontalsystems.tonkit.models
 
 import io.horizontalsystems.tonkit.Address
 import io.tonapi.models.LiquidityDepositAction
+import io.tonapi.models.NftItemTransferAction
 import io.tonapi.models.Price
 import java.math.BigInteger
 
@@ -15,7 +16,8 @@ data class Action(
     val contractDeploy: ContractDeploy?,
     val jettonSwap: JettonSwap?,
     val smartContractExec: SmartContractExec?,
-    val liquidityDeposit: LiquidityDeposit? = null
+    val liquidityDeposit: LiquidityDeposit? = null,
+    val nftTransfer: NftTransfer? = null,
 ) {
     enum class Type {
         TonTransfer,
@@ -26,6 +28,7 @@ data class Action(
         JettonSwap,
         SmartContract,
         LiquidityDeposit,
+        NftTransfer,
         Unknown;
 
         companion object {
@@ -38,6 +41,7 @@ data class Action(
                 io.tonapi.models.Action.Type.JettonSwap -> JettonSwap
                 io.tonapi.models.Action.Type.SmartContractExec -> SmartContract
                 io.tonapi.models.Action.Type.LiquidityDeposit -> LiquidityDeposit
+                io.tonapi.models.Action.Type.NftItemTransfer -> NftTransfer
                 else -> Unknown
             }
         }
@@ -127,6 +131,7 @@ data class Action(
             }
 
             val liquidityDeposit = action.liquidityDeposit?.let { LiquidityDeposit.fromApi(it) }
+            val nftTransfer = action.nftItemTransfer?.let { NftTransfer.fromApi(it) }
 
             return Action(
                 Type.fromApi(action.type),
@@ -138,7 +143,8 @@ data class Action(
                 contractDeploy,
                 jettonSwap,
                 smartContractExec,
-                liquidityDeposit
+                liquidityDeposit,
+                nftTransfer,
             )
         }
     }
@@ -251,6 +257,26 @@ data class LiquidityDeposit(
         private inline fun <T> parseOrNull(block: () -> T): T? = try {
             block()
         } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+data class NftTransfer(
+    val nft: Address,
+    val sender: AccountAddress?,
+    val recipient: AccountAddress?,
+    val comment: String?,
+) {
+    companion object {
+        fun fromApi(transfer: NftItemTransferAction): NftTransfer? = try {
+            NftTransfer(
+                nft = Address.parse(transfer.nft),
+                sender = transfer.sender?.let { AccountAddress.fromApi(it) },
+                recipient = transfer.recipient?.let { AccountAddress.fromApi(it) },
+                comment = transfer.comment,
+            )
+        } catch (e: IllegalArgumentException) {
             null
         }
     }

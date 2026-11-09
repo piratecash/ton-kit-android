@@ -35,6 +35,8 @@ sealed interface TonWallet {
         internal fun walletEntity(network: Network) = walletEntity(publicKeyEd25519, hashSigner, version, network)
 
         override fun address(network: Network) = walletEntity(network).senderAddress
+
+        fun maxMessages(network: Network) = walletEntity(network).maxMessages
     }
 
     /** Signs on a hardware device through [deviceSigner], never through a [HashSigner]. The device signs v4R2 only. */
@@ -48,6 +50,8 @@ sealed interface TonWallet {
             walletEntity(publicKeyEd25519, DeviceOnlyHashSigner, version, network)
 
         override fun address(network: Network) = walletEntity(network).senderAddress
+
+        fun maxMessages(network: Network) = walletEntity(network).maxMessages
     }
 
     data class Seed(val seed: ByteArray, override val version: TonWalletVersion) : FullAccess(

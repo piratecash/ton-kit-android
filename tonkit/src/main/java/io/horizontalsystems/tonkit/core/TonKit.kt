@@ -8,13 +8,16 @@ import io.horizontalsystems.tonkit.PlatformContext
 import io.horizontalsystems.tonkit.api.AnonymousRateLimitInterceptor
 import io.horizontalsystems.tonkit.api.ApiKeyProvider
 import io.horizontalsystems.tonkit.api.IApiListener
+import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.api.RateLimitInterceptor
 import io.horizontalsystems.tonkit.api.TonApi
 import io.horizontalsystems.tonkit.api.TonApiListener
+import io.horizontalsystems.tonkit.models.DnsExpiringItem
 import io.horizontalsystems.tonkit.models.Event
 import io.horizontalsystems.tonkit.models.EventInfo
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.Network
+import io.horizontalsystems.tonkit.models.NftItem
 import io.horizontalsystems.tonkit.models.RawMessageBroadcastMetadata
 import io.horizontalsystems.tonkit.models.RawMessageBroadcastResult
 import io.horizontalsystems.tonkit.models.SignedRawTonTransaction
@@ -63,6 +66,7 @@ class TonKit internal constructor(
     private val rawMessageBroadcaster: RawMessageBroadcaster,
     val network: Network,
     private val transactionSigner: TransactionSigner,
+    private val api: IApi,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
     val receiveAddress get() = address
@@ -121,6 +125,12 @@ class TonKit internal constructor(
     fun eventFlow(tagQuery: TagQuery): Flow<EventInfo> {
         return eventManager.eventFlow(tagQuery)
     }
+
+    suspend fun nftItems(limit: Int = 1000): List<NftItem> = api.getAccountNftItems(address, limit)
+
+    suspend fun nftItem(address: Address): NftItem = api.getNftItem(address)
+
+    suspend fun dnsExpiring(period: Int): List<DnsExpiringItem> = api.getDnsExpiring(address, period)
 
     suspend fun tagTokens(): List<TagToken> {
         return eventManager.tagTokens()
@@ -386,7 +396,8 @@ class TonKit internal constructor(
                 transactionSender,
                 rawMessageBroadcaster,
                 network,
-                transactionSigner
+                transactionSigner,
+                api,
             )
         }
 

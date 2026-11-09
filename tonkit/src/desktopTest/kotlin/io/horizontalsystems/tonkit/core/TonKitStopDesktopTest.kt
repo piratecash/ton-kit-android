@@ -241,6 +241,7 @@ class TonKitStopDesktopTest {
         rawMessageBroadcaster = rawMessageBroadcaster,
         network = Network.MainNet,
         transactionSigner = transactionSigner,
+        api = api,
         dispatcher = dispatcher,
     )
 

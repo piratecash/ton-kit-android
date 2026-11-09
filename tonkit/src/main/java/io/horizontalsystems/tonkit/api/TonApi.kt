@@ -6,16 +6,19 @@ import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.AccountStatus
 import io.horizontalsystems.tonkit.models.EmulatedFee
 import io.horizontalsystems.tonkit.models.Event
+import io.horizontalsystems.tonkit.models.DnsExpiringItem
 import io.horizontalsystems.tonkit.models.Jetton
 import io.horizontalsystems.tonkit.models.JettonBalance
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.models.Network.MainNet
 import io.horizontalsystems.tonkit.models.Network.TestNet
+import io.horizontalsystems.tonkit.models.NftItem
 import io.tonapi.apis.AccountsApi
 import io.tonapi.apis.BlockchainApi
 import io.tonapi.apis.EmulationApi
 import io.tonapi.apis.JettonsApi
 import io.tonapi.apis.LiteServerApi
+import io.tonapi.apis.NFTApi
 import io.tonapi.apis.WalletApi
 import io.tonapi.models.EmulateMessageToWalletRequest
 import io.tonapi.models.EmulateMessageToWalletRequestParamsInner
@@ -40,6 +43,7 @@ class TonApi(val network: Network, okHttpClient: OkHttpClient) : IApi {
     private val liteServerApi = LiteServerApi(basePath, okHttpClient)
     val emulationApi = EmulationApi(basePath, okHttpClient)
     private val blockchainApi = BlockchainApi(basePath, okHttpClient)
+    private val nftApi = NFTApi(basePath, okHttpClient)
 
     override suspend fun getAccount(address: Address): Account = withContext(Dispatchers.IO) {
         val account = accountsApi.getAccount(address.toRaw())
@@ -130,6 +134,22 @@ class TonApi(val network: Network, okHttpClient: OkHttpClient) : IApi {
             }
         }
     }
+
+    override suspend fun getAccountNftItems(address: Address, limit: Int): List<NftItem> =
+        withContext(Dispatchers.IO) {
+            accountsApi.getAccountNftItems(address.toRaw(), limit = limit, indirectOwnership = true)
+                .nftItems
+                .mapNotNull(NftItem.Companion::fromApiOrNull)
+        }
+
+    override suspend fun getNftItem(address: Address): NftItem = withContext(Dispatchers.IO) {
+        NftItem.fromApi(nftApi.getNftItemByAddress(address.toRaw()))
+    }
+
+    override suspend fun getDnsExpiring(address: Address, period: Int): List<DnsExpiringItem> =
+        withContext(Dispatchers.IO) {
+            accountsApi.getAccountDnsExpiring(address.toRaw(), period).items.map(DnsExpiringItem.Companion::fromApi)
+        }
 
     suspend fun emulate(
         boc: String,
