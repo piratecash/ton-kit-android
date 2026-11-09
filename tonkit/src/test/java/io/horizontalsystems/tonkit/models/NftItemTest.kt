@@ -33,12 +33,13 @@ class NftItemTest {
         previews: List<ImagePreview>? = null,
         trust: TrustType = TrustType.none,
         address: String = raw('1'),
+        approvedBy: List<ApiNftItem.ApprovedBy> = emptyList(),
     ) = ApiNftItem(
         address = address,
         index = 0,
         verified = true,
         metadata = metadata,
-        approvedBy = emptyList(),
+        approvedBy = approvedBy,
         trust = trust,
         owner = owner,
         collection = collection,
@@ -48,6 +49,16 @@ class NftItemTest {
 
     private fun sale(owner: ApiAccountAddress?) =
         Sale(raw('4'), account('5'), Price("1", "TON"), owner)
+
+    @Test
+    fun fromApi_approvedByMarketplace_isVerified() {
+        assertTrue(NftItem.fromApi(apiItem(approvedBy = listOf(ApiNftItem.ApprovedBy.getgems))).verified)
+    }
+
+    @Test
+    fun fromApi_noApprovals_isNotVerified() {
+        assertEquals(false, NftItem.fromApi(apiItem(approvedBy = emptyList())).verified)
+    }
 
     @Test
     fun fromApi_nonStringMetadata_yieldsNullsWithoutThrowing() {

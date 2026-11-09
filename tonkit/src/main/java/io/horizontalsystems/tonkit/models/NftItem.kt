@@ -10,6 +10,7 @@ data class NftItem(
     val description: String?,
     val renderType: String?,
     val trust: NftTrust,
+    val verified: Boolean,
     val collection: NftCollection?,
     val previews: List<NftPreview>,
     val isOnSale: Boolean,
@@ -37,6 +38,7 @@ data class NftItem(
                 description = metadata["description"] as? String,
                 renderType = metadata["render_type"] as? String,
                 trust = NftTrust.fromApi(item.trust),
+                verified = item.approvedBy.isNotEmpty(),
                 collection = item.collection?.let {
                     NftCollection(
                         Address.parse(it.address).toUserFriendly(bounceable = true),
