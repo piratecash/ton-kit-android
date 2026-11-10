@@ -275,6 +275,16 @@ class TonExternalSignerTest {
     }
 
     @Test
+    fun sign_externalSignerExplicitSeqno_deviceSignsItWithoutReadingSeqno() = runBlocking {
+        val device = FakeDevice()
+
+        TransactionSigner(fakeTonApi(seqno = null, rawTime = RAW_TIME))
+            .sign(sendRequest(message(forwardHi)), TonWallet.ExternalSigner(publicKey, device), seqno = 42)
+
+        assertEquals(42, device.transactions.single().seqno)
+    }
+
+    @Test
     fun sign_externalSignerUnknownPayload_signsBlind() = runBlocking {
         val payload = buildCell { storeUInt(0x25938561, 32); storeUInt(1, 64) }
         val device = FakeDevice()

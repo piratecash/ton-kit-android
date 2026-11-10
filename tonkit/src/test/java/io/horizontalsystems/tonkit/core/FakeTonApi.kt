@@ -19,11 +19,11 @@ internal fun fakeHttpClient(respond: (Request) -> Pair<Int, String>): OkHttpClie
     }.build()
 
 /**
- * A mainnet [TonApi] answering only the seqno and time requests of signing, plus the emulate
- * request with [emulation] when given; each emulate request body is recorded in [emulateRequests].
+ * A mainnet [TonApi] answering only the seqno (unless [seqno] is null) and time requests of signing, plus the
+ * emulate request with [emulation] when given; each emulate request body is recorded in [emulateRequests].
  */
 internal fun fakeTonApi(
-    seqno: Int,
+    seqno: Int?,
     rawTime: Int,
     emulation: String? = null,
     emulateRequests: MutableList<String> = mutableListOf(),
@@ -31,7 +31,7 @@ internal fun fakeTonApi(
     val client = fakeHttpClient { request ->
         val path = request.url.encodedPath
         200 to when {
-            path.endsWith("/seqno") -> """{"seqno":$seqno}"""
+            path.endsWith("/seqno") && seqno != null -> """{"seqno":$seqno}"""
             path.endsWith("/get_time") -> """{"time":$rawTime}"""
             path.endsWith("/wallet/emulate") && emulation != null -> {
                 emulateRequests += Buffer().also { request.body?.writeTo(it) }.readUtf8()

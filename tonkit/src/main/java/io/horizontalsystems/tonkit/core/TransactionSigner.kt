@@ -19,21 +19,21 @@ class TransactionSigner(private val api: TonApi) {
         return emulate(request, tonWallet.walletEntity(api.network))
     }
 
-    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet.FullAccess): String {
+    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet.FullAccess, seqno: Int? = null): String {
         val walletEntity = tonWallet.walletEntity(api.network)
 
-        val seqno = api.getAccountSeqno(walletEntity.accountId)
-        val message = walletEntity.signedMessage(seqno, getSafeValidUntil(request.validUntil), request.transfers, false)
+        val messageSeqno = seqno ?: api.getAccountSeqno(walletEntity.accountId)
+        val message = walletEntity.signedMessage(messageSeqno, getSafeValidUntil(request.validUntil), request.transfers, false)
         return message.base64()
     }
 
     /** Swaps send one message; the device signs no more than that. */
-    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet.ExternalSigner): String {
+    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet.ExternalSigner, seqno: Int? = null): String {
         val message = request.messages.singleOrNull()
             ?: throw TonExternalSignerException.UnsupportedMessageCount(request.messages.size)
         val walletEntity = tonWallet.walletEntity(api.network)
-        val seqno = api.getAccountSeqno(walletEntity.accountId)
-        val transaction = message.toDeviceTransaction(seqno, getSafeValidUntil(request.validUntil))
+        val messageSeqno = seqno ?: api.getAccountSeqno(walletEntity.accountId)
+        val transaction = message.toDeviceTransaction(messageSeqno, getSafeValidUntil(request.validUntil))
         return tonWallet.deviceSigner.signedMessage(walletEntity.contract, transaction).base64()
     }
 

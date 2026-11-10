@@ -294,9 +294,10 @@ class TonKit internal constructor(
         rawMessageBroadcaster.retryQueued()
     }
 
-    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet): String = when (tonWallet) {
-        is TonWallet.FullAccess -> transactionSigner.sign(request, tonWallet)
-        is TonWallet.ExternalSigner -> transactionSigner.sign(request, tonWallet)
+    /** A caller sending several transactions in a row passes the [seqno] it read, so it knows which seqno each carries. */
+    suspend fun sign(request: SendRequestEntity, tonWallet: TonWallet, seqno: Int? = null): String = when (tonWallet) {
+        is TonWallet.FullAccess -> transactionSigner.sign(request, tonWallet, seqno)
+        is TonWallet.ExternalSigner -> transactionSigner.sign(request, tonWallet, seqno)
         is TonWallet.WatchOnly -> error("Check failed.")
     }
 

@@ -98,17 +98,27 @@ class W5WalletTest {
 
     @Test
     fun sign_w5ThreeMessages_signsReferenceBodyInRequestOrder() = runBlocking {
-        val request = sendRequest(
-            message("a1", bounceable = true, amount = 100_000_000),
-            message("b2", bounceable = false, amount = 200_000_000)
-                .put("payload", buildCell { storeUInt(0, 32); storeBytes("second".toByteArray()) }.base64()),
-            message("c3", bounceable = true, amount = 300_000_000),
-        )
-
-        val boc = TransactionSigner(fakeTonApi(seqno = 5, rawTime = RAW_TIME)).sign(request, wallet)
+        val boc = TransactionSigner(fakeTonApi(seqno = 5, rawTime = RAW_TIME)).sign(threeMessagesRequest(), wallet)
 
         assertSignedReferenceBody(W5_THREE_MESSAGES, externalMessage(base64(boc)))
     }
+
+    @Test
+    fun sign_explicitSeqno_signsWithItWithoutReadingSeqno() = runBlocking {
+        // The api cannot answer a seqno request, so reading one fails the test.
+        val signer = TransactionSigner(fakeTonApi(seqno = null, rawTime = RAW_TIME))
+
+        val boc = signer.sign(threeMessagesRequest(), wallet, seqno = 5)
+
+        assertSignedReferenceBody(W5_THREE_MESSAGES, externalMessage(base64(boc)))
+    }
+
+    private fun threeMessagesRequest() = sendRequest(
+        message("a1", bounceable = true, amount = 100_000_000),
+        message("b2", bounceable = false, amount = 200_000_000)
+            .put("payload", buildCell { storeUInt(0, 32); storeBytes("second".toByteArray()) }.base64()),
+        message("c3", bounceable = true, amount = 300_000_000),
+    )
 
     /** The body is the reference one, signed at the tail through the wallet's [HashSigner]. */
     private fun assertSignedReferenceBody(vector: String, message: Message<Cell>) {
