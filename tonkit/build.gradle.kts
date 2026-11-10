@@ -1,3 +1,4 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -151,5 +152,12 @@ android {
 afterEvaluate {
     tasks.named("test") {
         dependsOn("desktopTest")
+    }
+}
+
+// JitPack otherwise prints only the exception class, hiding why a native library failed to load.
+tasks.withType<Test>().configureEach {
+    testLogging {
+        exceptionFormat = TestExceptionFormat.FULL
     }
 }

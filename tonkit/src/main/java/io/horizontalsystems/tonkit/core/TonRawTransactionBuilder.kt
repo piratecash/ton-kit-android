@@ -104,7 +104,7 @@ internal class TonRawTransactionBuilder(
         val attached = transfers.sumOf { BigInteger.valueOf(it.coins.coins.amount.toLong()) }
         // Headroom over the attached value, so the emulated wallet is never underfunded.
         val balance = attached + BigInteger.valueOf(EMULATED_BALANCE)
-        val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), balance.longValueExact()))
+        val params = listOf(EmulateMessageToWalletRequestParamsInner(sender.toRaw(), balance.toLongExact()))
         val emulated = api.estimateFee(message.base64(), params)
 
         val fee = if (wholeTrace) emulated.traceFees else emulated.totalFees
@@ -175,6 +175,12 @@ internal class TonRawTransactionBuilder(
         } catch (error: Throwable) {
             System.currentTimeMillis() / MILLIS_IN_SECOND + ttl
         }
+    }
+
+    // BigInteger.longValueExact() exists on Android only from API 31.
+    private fun BigInteger.toLongExact(): Long {
+        if (bitLength() >= Long.SIZE_BITS) throw ArithmeticException("BigInteger out of long range")
+        return toLong()
     }
 
     private fun TonKit.SendAmount.data(): AmountData {
