@@ -31,6 +31,10 @@ jobs:
       - name: Create local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
+      # Catches Android API calls newer than minSdk, which unit tests on the JVM cannot see.
+      - name: Run Android lint
+        run: ./gradlew :tonkit:lintDebug
+
       - name: Run unit tests
         run: ./gradlew test
 
