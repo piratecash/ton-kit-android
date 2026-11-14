@@ -4,17 +4,24 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import io.horizontalsystems.tonkit.models.JettonBalance
 
 @Dao
 interface JettonDao {
     @Query("SELECT * FROM JettonBalance")
-    fun getJettonBalances(): List<JettonBalance>
+    suspend fun getJettonBalances(): List<JettonBalance>
+
+    @Transaction
+    suspend fun replaceAll(jettonBalances: List<JettonBalance>) {
+        deleteAll()
+        insertAll(jettonBalances)
+    }
 
     @Query("DELETE FROM JETTONBALANCE")
-    fun deleteAll()
+    suspend fun deleteAll()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertAll(jettonBalances: List<JettonBalance>)
+    suspend fun insertAll(jettonBalances: List<JettonBalance>)
 
 }

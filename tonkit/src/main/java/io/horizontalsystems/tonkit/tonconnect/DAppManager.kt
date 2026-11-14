@@ -4,7 +4,7 @@ import com.tonapps.wallet.data.tonconnect.entities.DAppEntity
 import kotlinx.coroutines.flow.Flow
 
 class DAppManager(private val dao: DAppDao) {
-    fun addApp(app: DAppEntity) {
+    suspend fun addApp(app: DAppEntity) {
         dao.save(app)
     }
 
@@ -12,7 +12,11 @@ class DAppManager(private val dao: DAppDao) {
         return dao.getAllFlow()
     }
 
-    fun remove(dApp: DAppEntity) {
+    suspend fun remove(dApp: DAppEntity) {
         return dao.delete(dApp)
+    }
+
+    suspend fun removeAllExcept(walletIds: Collection<String>) {
+        dao.deleteAllExcept(walletIds)
     }
 }

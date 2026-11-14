@@ -3,7 +3,6 @@ package com.tonapps.blockchain.ton.extensions
 import org.ton.boc.BagOfCells
 import org.ton.cell.Cell
 import org.ton.cell.CellBuilder
-import org.ton.crypto.base64
 import org.ton.tlb.TlbCodec
 import org.ton.tlb.TlbObject
 import org.ton.tlb.loadTlb
@@ -25,5 +24,16 @@ inline fun <reified T : TlbObject> T.bocBase64(): String {
 
 inline fun <reified T: TlbObject> String.toTlb(): T? {
     val boc = safeParseCell() ?: return null
-    return boc.parse { loadTlb(T::class.java.getMethod("tlbCodec").invoke(null) as TlbCodec<T>) }
+
+    if (boc.bits.size < 32) {
+        return null
+    }
+
+    return try {
+        boc.parse {
+            loadTlb(T::class.java.getMethod("tlbCodec").invoke(null) as TlbCodec<T>)
+        }
+    } catch (_: Exception) {
+        null
+    }
 }

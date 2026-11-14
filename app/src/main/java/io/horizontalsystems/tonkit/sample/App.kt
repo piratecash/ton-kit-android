@@ -3,8 +3,11 @@ package io.horizontalsystems.tonkit.sample
 import android.app.Application
 import io.horizontalsystems.tonkit.core.TonKit
 import io.horizontalsystems.tonkit.core.TonWallet
+import io.horizontalsystems.tonkit.core.TonWalletVersion
 import io.horizontalsystems.tonkit.models.Network
 import io.horizontalsystems.tonkit.tonconnect.TonConnectKit
+import kotlinx.coroutines.runBlocking
+import java.security.MessageDigest
 
 class App : Application() {
 
@@ -13,27 +16,38 @@ class App : Application() {
         initTonKit()
     }
 
-    private fun initTonKit() {
-        val walletId = "wallet-${tonWallet.javaClass.simpleName}"
+    private fun initTonKit() = runBlocking {
+        val walletId = "wallet-${tonWallet.javaClass.simpleName}-${tonWallet.version}"
 //        val walletId = UUID.randomUUID().toString()
 
-        val network = Network.MainNet
+        // Demo keys only: a real wallet keeps a random key in secure storage.
+        val databaseKey = sha256(walletId)
+        TonKit.migrateDatabase(this@App, network, walletId, databaseKey)
         tonKit = TonKit.getInstance(
             tonWallet,
             network,
-            this,
-            walletId
+            this@App,
+            walletId,
+            databaseKey,
+            TonKit.createHttpClient(),
         )
 
-        tonConnectKit = TonConnectKit.getInstance(this, "Unstoppable Wallet", "0.41.0")
+        val tonConnectDatabaseKey = sha256("ton-connect-demo")
+        TonConnectKit.migrateDatabase(this@App, tonConnectDatabaseKey)
+        tonConnectKit = TonConnectKit.getInstance(this@App, tonConnectDatabaseKey, "Unstoppable Wallet", "0.41.0")
     }
+
+    private fun sha256(value: String): ByteArray =
+        MessageDigest.getInstance("SHA-256").digest(value.toByteArray())
 
     companion object {
         //        val tonWallet: TonWallet = TonWallet.WatchOnly("EQDfvVvoSX_cDJ_L38Z2hkhA3fitZCPW1WV9mw6CcNbIrH-Q")
         val words = BuildConfig.WORDS.split(" ")
 //        val words =
 //            "used ugly meat glad balance divorce inner artwork hire invest already piano".split(" ")
-        val tonWallet = TonWallet.Mnemonic(words, "")
+        val tonWallet = TonWallet.Mnemonic(words, "", TonWalletVersion.valueOf(BuildConfig.TON_WALLET_VERSION))
+
+        val network = Network.valueOf(BuildConfig.TON_NETWORK)
 
         lateinit var tonKit: TonKit
         lateinit var tonConnectKit: TonConnectKit

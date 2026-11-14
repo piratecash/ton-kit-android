@@ -9,9 +9,9 @@ import com.tonapps.wallet.data.core.entity.SendRequestEntity
 @Dao
 interface SendRequestDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun save(entity: SendRequestEntity)
+    suspend fun save(entity: SendRequestEntity)
 
     @Delete
-    fun delete(entity: SendRequestEntity)
+    suspend fun delete(entity: SendRequestEntity)
 
 }

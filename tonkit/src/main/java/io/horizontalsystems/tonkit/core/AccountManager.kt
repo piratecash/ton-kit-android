@@ -1,8 +1,9 @@
 package io.horizontalsystems.tonkit.core
 
-import android.util.Log
+import co.touchlab.kermit.Logger
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.api.IApi
+import io.horizontalsystems.tonkit.models.Account
 import io.horizontalsystems.tonkit.models.SyncState
 import io.horizontalsystems.tonkit.storage.AccountDao
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,18 +14,20 @@ class AccountManager(
     private val address: Address,
     private val api: IApi,
     private val dao: AccountDao,
+    account: Account?,
+    private val logger: Logger,
 ) {
-    private val _accountFlow = MutableStateFlow(dao.getAccount(address))
+    private val _accountFlow = MutableStateFlow(account)
     val accountFlow = _accountFlow.asStateFlow()
 
     private val _syncStateFlow = MutableStateFlow<SyncState>(SyncState.NotSynced(TonKit.SyncError.NotStarted))
     val syncStateFlow = _syncStateFlow.asStateFlow()
 
     suspend fun sync() {
-        Log.d("AAA", "Syncing account...")
+        logger.d { "Syncing account..." }
 
         if (_syncStateFlow.value is SyncState.Syncing) {
-            Log.d("AAA","Syncing account is in progress")
+            logger.d { "Syncing account is in progress" }
             return
         }
 
@@ -34,7 +37,6 @@ class AccountManager(
 
         try {
             val account = api.getAccount(address)
-            Log.d("AAA", "Got account: $account")
 
             _accountFlow.update {
                 account

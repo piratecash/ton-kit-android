@@ -40,7 +40,14 @@ class SendViewModel(private val sendType: SendType) : ViewModel() {
     private var sendAmount: BigDecimal? = null
 
     private val sendRecipientForKit: FriendlyAddress?
-        get() = sendRecipient?.let { FriendlyAddress.parse(it) }
+        get() = sendRecipient?.let {
+            // Recomputed on every keystroke: a half-typed address is not an error.
+            try {
+                FriendlyAddress.parse(it)
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+        }
     private val sendAmountForKit: TonKit.SendAmount?
         get() = when (sendType) {
             is SendType.Jetton -> {
@@ -157,7 +164,7 @@ class SendViewModel(private val sendType: SendType) : ViewModel() {
                     }
 
                     ensureActive()
-                    fee = estimateFee.toBigDecimal(9)
+                    fee = estimateFee.fee.toBigDecimal(9)
                 } catch (_: CancellationException) {
                 } catch (e: Throwable) {
                     feeError = e

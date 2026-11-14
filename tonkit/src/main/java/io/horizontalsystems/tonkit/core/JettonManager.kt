@@ -1,6 +1,6 @@
 package io.horizontalsystems.tonkit.core
 
-import android.util.Log
+import co.touchlab.kermit.Logger
 import io.horizontalsystems.tonkit.Address
 import io.horizontalsystems.tonkit.api.IApi
 import io.horizontalsystems.tonkit.models.JettonBalance
@@ -14,24 +14,21 @@ class JettonManager(
     private val address: Address,
     private val api: IApi,
     private val dao: JettonDao,
+    jettonBalances: List<JettonBalance>,
+    private val logger: Logger,
 ) {
-    private val _jettonBalanceMapFlow = MutableStateFlow(getInitialJettonBalanceMap())
+    private val _jettonBalanceMapFlow = MutableStateFlow(jettonBalances.associateBy { it.jettonAddress })
     val jettonBalanceMapFlow = _jettonBalanceMapFlow.asStateFlow()
 
     private val _syncStateFlow =
         MutableStateFlow<SyncState>(SyncState.NotSynced(TonKit.SyncError.NotStarted))
     val syncStateFlow = _syncStateFlow.asStateFlow()
 
-    private fun getInitialJettonBalanceMap(): Map<Address, JettonBalance> {
-        val jettonBalances = dao.getJettonBalances()
-        return jettonBalances.associateBy { it.jettonAddress }
-    }
-
     suspend fun sync() {
-        Log.d("AAA", "Syncing jetton balances...")
+        logger.d { "Syncing jetton balances..." }
 
         if (_syncStateFlow.value is SyncState.Syncing) {
-            Log.d("AAA", "Syncing jetton balances is in progress")
+            logger.d { "Syncing jetton balances is in progress" }
             return
         }
 
@@ -41,20 +38,19 @@ class JettonManager(
 
         try {
             val jettonBalances = api.getAccountJettonBalances(address)
-            Log.d("AAA", "Got jetton balances: ${jettonBalances.size}")
+            logger.d { "Got jetton balances: ${jettonBalances.size}" }
 
             _jettonBalanceMapFlow.update {
                 jettonBalances.associateBy { it.jettonAddress }
             }
 
-            dao.deleteAll()
-            dao.insertAll(jettonBalances)
+            dao.replaceAll(jettonBalances)
 
             _syncStateFlow.update {
                 SyncState.Synced
             }
         } catch (e: Throwable) {
-            Log.e("AAA", "Jetton balances sync error: $e", e)
+            logger.e(e) { "Jetton balances sync error" }
             _syncStateFlow.update {
                 SyncState.NotSynced(e)
             }

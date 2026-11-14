@@ -1,6 +1,9 @@
 package io.horizontalsystems.tonkit.models
 
 import io.horizontalsystems.tonkit.Address
+import io.tonapi.models.LiquidityDepositAction
+import io.tonapi.models.NftItemTransferAction
+import io.tonapi.models.Price
 import java.math.BigInteger
 
 data class Action(
@@ -12,7 +15,9 @@ data class Action(
     val jettonMint: JettonMint?,
     val contractDeploy: ContractDeploy?,
     val jettonSwap: JettonSwap?,
-    val smartContractExec: SmartContractExec?
+    val smartContractExec: SmartContractExec?,
+    val liquidityDeposit: LiquidityDeposit? = null,
+    val nftTransfer: NftTransfer? = null,
 ) {
     enum class Type {
         TonTransfer,
@@ -22,6 +27,8 @@ data class Action(
         ContractDeploy,
         JettonSwap,
         SmartContract,
+        LiquidityDeposit,
+        NftTransfer,
         Unknown;
 
         companion object {
@@ -33,6 +40,8 @@ data class Action(
                 io.tonapi.models.Action.Type.ContractDeploy -> ContractDeploy
                 io.tonapi.models.Action.Type.JettonSwap -> JettonSwap
                 io.tonapi.models.Action.Type.SmartContractExec -> SmartContract
+                io.tonapi.models.Action.Type.LiquidityDeposit -> LiquidityDeposit
+                io.tonapi.models.Action.Type.NftItemTransfer -> NftTransfer
                 else -> Unknown
             }
         }
@@ -121,6 +130,9 @@ data class Action(
                 )
             }
 
+            val liquidityDeposit = action.liquidityDeposit?.let { LiquidityDeposit.fromApi(it) }
+            val nftTransfer = action.nftItemTransfer?.let { NftTransfer.fromApi(it) }
+
             return Action(
                 Type.fromApi(action.type),
                 Status.fromApi(action.status),
@@ -130,7 +142,9 @@ data class Action(
                 jettonMint,
                 contractDeploy,
                 jettonSwap,
-                smartContractExec
+                smartContractExec,
+                liquidityDeposit,
+                nftTransfer,
             )
         }
     }
@@ -190,3 +204,80 @@ data class SmartContractExec(
     val operation: String,
     val payload: String?,
 )
+
+data class LiquidityDeposit(
+    val protocol: String?,
+    val from: AccountAddress,
+    val tokens: List<Token>,
+) {
+    data class Token(
+        val amount: BigInteger,
+        val jetton: Jetton?,
+        val vault: Address,
+    )
+
+    companion object {
+        fun fromApi(deposit: LiquidityDepositAction): LiquidityDeposit? {
+            val from = deposit.from?.let { parseOrNull { AccountAddress.fromApi(it) } } ?: return null
+            val tokens = deposit.tokens.orEmpty().mapNotNull { tokenFromApi(it) }
+            if (tokens.isEmpty()) return null
+
+            return LiquidityDeposit(deposit.protocol?.name, from, tokens)
+        }
+
+        private fun tokenFromApi(info: LiquidityDepositAction.VaultDepositInfo): Token? {
+            val price = info.price ?: return null
+            val vault = info.vault ?: return null
+            val amount = price.value.toBigIntegerOrNull() ?: return null
+            val jetton = when (price.currencyType) {
+                "native" -> null
+                "jetton" -> jettonFromApi(price) ?: return null
+                else -> return null
+            }
+
+            return parseOrNull { Token(amount, jetton, Address.parse(vault)) }
+        }
+
+        private fun jettonFromApi(price: Price): Jetton? {
+            val address = price.jetton ?: return null
+            val decimals = price.decimals ?: return null
+
+            return parseOrNull {
+                Jetton(
+                    Address.parse(address),
+                    price.tokenName,
+                    price.tokenName,
+                    decimals,
+                    price.image,
+                    JettonVerificationType.UNKNOWN
+                )
+            }
+        }
+
+        private inline fun <T> parseOrNull(block: () -> T): T? = try {
+            block()
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
+data class NftTransfer(
+    val nft: Address,
+    val sender: AccountAddress?,
+    val recipient: AccountAddress?,
+    val comment: String?,
+) {
+    companion object {
+        fun fromApi(transfer: NftItemTransferAction): NftTransfer? = try {
+            NftTransfer(
+                nft = Address.parse(transfer.nft),
+                sender = transfer.sender?.let { AccountAddress.fromApi(it) },
+                recipient = transfer.recipient?.let { AccountAddress.fromApi(it) },
+                comment = transfer.comment,
+            )
+        } catch (e: IllegalArgumentException) {
+            null
+        }
+    }
+}

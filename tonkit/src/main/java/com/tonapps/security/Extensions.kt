@@ -1,7 +1,5 @@
 package com.tonapps.security
 
-import android.content.SharedPreferences
-import android.util.Base64
 import java.io.Closeable
 import java.security.Key
 import javax.crypto.SecretKey
@@ -64,53 +62,6 @@ fun Key.decrypt(iv: ByteArray, data: ByteArray): ByteArray? {
     return runCatching {
         CipherAes.decrypt(this, iv, data)
     }.getOrNull()
-}
-
-fun base64(input: String): ByteArray? {
-    return try {
-        Base64.decode(input, Base64.DEFAULT)
-    } catch (e: Throwable) {
-        null
-    }
-}
-
-fun base64(input: ByteArray): String? {
-    return try {
-        Base64.encodeToString(input, Base64.DEFAULT)
-    } catch (e: Throwable) {
-        null
-    }
-}
-
-fun SharedPreferences.getByteArray(key: String): ByteArray? {
-    val value = run {
-        val value = getString(key, null)
-        if (value.isNullOrBlank()) {
-            return byteArrayOf(0)
-        }
-        base64(value) ?: byteArrayOf(0)
-    }
-
-    if (value.isZero()) {
-        value.clear()
-        return null
-    }
-    return value
-}
-
-fun SharedPreferences.Editor.putByteArray(key: String, value: ByteArray): SharedPreferences.Editor {
-    if (value.isZero()) {
-        remove(key)
-        return this
-    } else {
-        val string = base64(value)
-        if (string == null) {
-            remove(key)
-        } else {
-            putString(key, string)
-        }
-    }
-    return this
 }
 
 fun hex(bytes: ByteArray): String = buildString(bytes.size * 2) {

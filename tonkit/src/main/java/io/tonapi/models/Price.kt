@@ -24,6 +24,10 @@ import com.squareup.moshi.JsonClass
  *
  * @param `value` 
  * @param tokenName 
+ * @param currencyType 
+ * @param decimals 
+ * @param image 
+ * @param jetton 
  */
 
 
@@ -33,7 +37,19 @@ data class Price (
     val `value`: kotlin.String,
 
     @Json(name = "token_name")
-    val tokenName: kotlin.String
+    val tokenName: kotlin.String,
+
+    @Json(name = "currency_type")
+    val currencyType: kotlin.String? = null,
+
+    @Json(name = "decimals")
+    val decimals: kotlin.Int? = null,
+
+    @Json(name = "image")
+    val image: kotlin.String? = null,
+
+    @Json(name = "jetton")
+    val jetton: kotlin.String? = null
 
 ) {
 

@@ -34,7 +34,7 @@ class EventHandlerSendTransaction(
         _sendRequestFlow.emit(SignTransaction(request, dApp))
     }
 
-    private fun removePendingRequest(request: SendRequestEntity) {
+    private suspend fun removePendingRequest(request: SendRequestEntity) {
         sendRequestDao.delete(request)
     }
 

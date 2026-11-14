@@ -1,18 +1,19 @@
 package com.tonapps.blockchain.ton.contract
 
-import org.ton.api.pub.PublicKeyEd25519
+import com.tonapps.blockchain.ton.extensions.base64
+import org.ton.kotlin.crypto.PublicKeyEd25519
 import org.ton.bitstring.BitString
 import org.ton.boc.BagOfCells
 import org.ton.cell.Cell
 import org.ton.cell.CellBuilder
 import org.ton.contract.wallet.WalletTransfer
-import org.ton.crypto.base64
 import java.math.BigInteger
 
 class LockupContractV1(
     publicKey: PublicKeyEd25519,
     private val configPubKey: BitString,
-    private val allowedDestinations: Boolean
+    private val allowedDestinations: Boolean,
+    override val hashSigner: HashSigner,
 ): BaseWalletContract(publicKey = publicKey) {
 
     override fun getSignaturePosition(): SignaturePosition {
@@ -23,7 +24,7 @@ class LockupContractV1(
         return CellBuilder.createCell {
             storeUInt(0, 32)
             storeUInt(walletId, 32)
-            storeBits(publicKey.key)
+            storeBytes(publicKey.key.toByteArray())
             storeBits(configPubKey)
         }
     }
