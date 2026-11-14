@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.tonapps.wallet.data.core.entity.SendRequestEntity
 import com.tonapps.wallet.data.tonconnect.entities.DAppEntity
+import io.horizontalsystems.databasenaming.DatabaseNameResolver
 import io.horizontalsystems.tonkit.PlatformContext
 import io.horizontalsystems.tonkit.storage.tonConnectKitDatabaseBuilder
 
@@ -24,9 +25,13 @@ abstract class TonConnectKitDatabase : RoomDatabase() {
     abstract fun keyValueDao(): KeyValueDao
 
     companion object {
-        internal fun getInstance(context: PlatformContext, name: String, databaseKey: ByteArray): TonConnectKitDatabase {
-            return tonConnectKitDatabaseBuilder(context, name, databaseKey).tonConnectSchemaPolicy().build()
-        }
+        internal fun getInstance(
+            context: PlatformContext,
+            name: String,
+            databaseKey: ByteArray,
+            nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
+        ): TonConnectKitDatabase =
+            tonConnectKitDatabaseBuilder(context, name, databaseKey, nameResolver).tonConnectSchemaPolicy().build()
     }
 }
 

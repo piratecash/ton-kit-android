@@ -16,6 +16,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -64,6 +68,19 @@ class TonConnectEventManager(
     fun stop() {
         handleDAppsJob?.cancel()
         collectEventsJob?.cancel()
+    }
+
+    /** Stops listening and waits for the events already taken, so their requests are stored before the database goes. */
+    suspend fun close() {
+        handleDAppsJob?.cancelAndJoin()
+        collectEventsJob?.cancelAndJoin()
+        // A replaced subscription may still dispatch its committed event and so launch a handler after a join.
+        while (true) {
+            val running = coroutineScope.coroutineContext.job.children.toList()
+            if (running.isEmpty()) break
+            running.joinAll()
+        }
+        coroutineScope.cancel()
     }
 
     private fun handleDApps(dApps: List<DAppEntity>) {

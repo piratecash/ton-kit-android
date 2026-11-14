@@ -20,10 +20,13 @@ import io.horizontalsystems.tonkit.tonconnect.LocalStorage
 import io.horizontalsystems.tonkit.tonconnect.SendRequestDao
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
@@ -33,6 +36,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -138,6 +143,46 @@ class TonConnectEventManagerTest {
         assertEquals("1", keyValues.values[LAST_EVENT_ID_KEY])
     }
 
+    @Test
+    fun close_handlerStillRunning_returnsOnlyAfterHandlerFinishes() = runBlocking {
+        val started = CompletableDeferred<String>()
+        val release = CompletableDeferred<Unit>()
+        val finished = CompletableDeferred<Unit>()
+        manager.registerHandler(BlockingHandler(started, release, finished))
+        firstSubscriptionData = bridgeEvent("""{"method":"sendTransaction","id":"request-1","params":[]}""")
+        manager.start()
+        withTimeout(10_000) { started.await() }
+
+        val closing = async(Dispatchers.Default) { manager.close() }
+
+        assertNull(withTimeoutOrNull(300) { closing.await() })
+        release.complete(Unit)
+        withTimeout(10_000) { closing.await() }
+        assertTrue(finished.isCompleted)
+    }
+
+    @Test
+    fun close_replacedSubscriptionDispatchesAfterClosingStarted_handlerStillRuns() = runBlocking {
+        val handled = CompletableDeferred<String>()
+        val release = CompletableDeferred<Unit>()
+        manager.registerHandler(SlowHandler(handled))
+        firstSubscriptionData = bridgeEvent("""{"method":"sendTransaction","id":"request-1","params":[]}""")
+        // The committed event waits while a dApp-list change replaces its subscription.
+        keyValues.afterFirstCommit = {
+            dApps.value = listOf(dApp, otherDApp)
+            withContext(Dispatchers.IO) { release.await() }
+        }
+        manager.start()
+        withTimeout(10_000) { secondSubscription.await() }
+
+        val closing = async(Dispatchers.Default) { manager.close() }
+        delay(300)
+        release.complete(Unit)
+        withTimeout(10_000) { closing.await() }
+
+        assertTrue(handled.isCompleted)
+    }
+
     private suspend fun assertWarnedWithoutSecret() {
         withTimeout(10_000) { warned.await() }
         val leaking = logs.logs.filter { entry ->
@@ -172,6 +217,30 @@ class TonConnectEventManagerTest {
 
         override suspend fun handle(requestId: String, params: JSONArray, dApp: DAppEntity) {
             handled.complete(requestId)
+        }
+    }
+
+    // Still running when the dispatching subscription finishes, like a handler writing to Room.
+    private class SlowHandler(private val handled: CompletableDeferred<String>) : ITonConnectEventHandler {
+        override val method = "sendTransaction"
+
+        override suspend fun handle(requestId: String, params: JSONArray, dApp: DAppEntity) {
+            delay(500)
+            handled.complete(requestId)
+        }
+    }
+
+    private class BlockingHandler(
+        private val started: CompletableDeferred<String>,
+        private val release: CompletableDeferred<Unit>,
+        private val finished: CompletableDeferred<Unit>,
+    ) : ITonConnectEventHandler {
+        override val method = "sendTransaction"
+
+        override suspend fun handle(requestId: String, params: JSONArray, dApp: DAppEntity) {
+            started.complete(requestId)
+            release.await()
+            finished.complete(Unit)
         }
     }
 

@@ -18,8 +18,9 @@ internal fun tonConnectKitDatabaseBuilder(
     context: PlatformContext,
     name: String,
     databaseKey: ByteArray,
+    nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
 ): RoomDatabase.Builder<TonConnectKitDatabase> =
-    desktopDatabaseBuilder(tonConnectNamespace, context, name, databaseKey)
+    desktopDatabaseBuilder(tonConnectNamespace, context, name, databaseKey, nameResolver)
 
 private inline fun <reified T : RoomDatabase> desktopDatabaseBuilder(
     namespace: KitDatabaseNamespace,

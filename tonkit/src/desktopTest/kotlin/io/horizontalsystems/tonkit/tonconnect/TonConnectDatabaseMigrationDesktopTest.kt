@@ -2,6 +2,7 @@ package io.horizontalsystems.tonkit.tonconnect
 
 import androidx.room.execSQL
 import androidx.room.useWriterConnection
+import io.horizontalsystems.databasenaming.DatabaseNameResolver
 import io.horizontalsystems.sqlcipher.room.DatabaseKeyMismatchException
 import io.horizontalsystems.sqlcipher.room.DatabaseMigrationRequiredException
 import io.horizontalsystems.sqlcipher.room.DatabaseMigrationResult
@@ -21,6 +22,7 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -42,6 +44,7 @@ class TonConnectDatabaseMigrationDesktopTest {
     private val directory: File get() = tmp.root
     private val context: PlatformContext get() = PlatformContext(directory)
     private val database: File get() = File(directory, "ton-connect")
+    private val opaque = DatabaseNameResolver { "n${it.hashCode().toUInt()}" }
 
     @Test
     fun migrateDatabase_plaintextDatabase_encryptsAndPreservesData() = runBlocking {
@@ -186,8 +189,41 @@ class TonConnectDatabaseMigrationDesktopTest {
         }
     }
 
-    private suspend fun kit(databaseKey: ByteArray): TonConnectKit =
-        TonConnectKit.getInstance(context, databaseKey, APP_NAME, APP_VERSION)
+    @Test
+    fun getInstance_overrideResolver_leavesNoDefaultNameOnDisk() = runBlocking<Unit> {
+        kit(key, opaque)
+
+        assertTrue(File(directory, opaque.resolve(TON_CONNECT_DATABASE_NAME)).isFile)
+        assertEquals(emptyList<String>(), directory.list()?.filter { NAMESPACE in it })
+    }
+
+    @Test
+    fun migrateDatabase_overrideResolver_migratesResolvedFile() = runBlocking {
+        val resolved = TonV2Fixture.copyTo(TonV2Fixture.TON_CONNECT_V2_RESOURCE, File(directory, opaque.resolve(NAMESPACE)))
+
+        val result = TonConnectKit.migrateDatabase(context, key, opaque)
+
+        assertEquals(DatabaseMigrationResult(1, 0), result)
+        assertFalse(hasPlaintextSqliteHeader(resolved))
+        assertEquals(emptyList<String>(), directory.list()?.filter { NAMESPACE in it })
+    }
+
+    @Test
+    fun close_openKit_closesDatabaseAndKeepsData() = runBlocking {
+        copyFixture()
+        TonConnectKit.migrateDatabase(context, key)
+        val kit = kit(key)
+
+        kit.close()
+
+        assertThrows(IllegalStateException::class.java) { runBlocking { kit.removeDAppsExcept(emptyList()) } }
+        assertEquals(TonV2Fixture.dApps(), kit(key).getDApps().first())
+    }
+
+    private suspend fun kit(
+        databaseKey: ByteArray,
+        nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
+    ): TonConnectKit = TonConnectKit.getInstance(context, databaseKey, APP_NAME, APP_VERSION, nameResolver)
 
     private fun copyFixture(): File = TonV2Fixture.copyTo(TonV2Fixture.TON_CONNECT_V2_RESOURCE, database)
 

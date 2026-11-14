@@ -22,8 +22,9 @@ internal fun tonConnectKitDatabaseBuilder(
     context: PlatformContext,
     name: String,
     databaseKey: ByteArray,
+    nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
 ): RoomDatabase.Builder<TonConnectKitDatabase> =
-    tonConnectNamespace.databases().encrypted(
+    tonConnectNamespace.databases(nameResolver).encrypted(
         Room.databaseBuilder(context, TonConnectKitDatabase::class.java, name),
         databaseFile(context, name).path,
         databaseKey,

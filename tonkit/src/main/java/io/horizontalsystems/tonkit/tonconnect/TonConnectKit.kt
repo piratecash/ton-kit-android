@@ -19,6 +19,8 @@ import com.tonapps.wallet.data.tonconnect.entities.reply.DAppAddressItemEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppEventSuccessEntity
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppProofItemReplySuccess
 import com.tonapps.wallet.data.tonconnect.entities.reply.DAppReply
+import androidx.room.RoomDatabase
+import io.horizontalsystems.databasenaming.DatabaseNameResolver
 import io.horizontalsystems.tonkit.PlatformContext
 import io.horizontalsystems.sqlcipher.room.DatabaseKeyMismatchException
 import io.horizontalsystems.sqlcipher.room.DatabaseMigrationConflictException
@@ -28,9 +30,9 @@ import io.horizontalsystems.sqlcipher.room.DatabaseMigrationResult
 import io.horizontalsystems.sqlcipher.room.InsufficientDatabaseMigrationSpaceException
 import io.horizontalsystems.tonkit.core.TonWallet
 import io.horizontalsystems.tonkit.models.Network
-import io.horizontalsystems.tonkit.storage.TON_CONNECT_DATABASE_NAME
 import io.horizontalsystems.tonkit.storage.databaseFile
 import io.horizontalsystems.tonkit.storage.requireValidDatabaseKey
+import io.horizontalsystems.tonkit.storage.resolvedTonConnectDatabaseName
 import io.horizontalsystems.tonkit.storage.tonConnectNamespace
 import io.horizontalsystems.tonkit.tonconnect.event.EventHandlerSendTransaction
 import io.horizontalsystems.tonkit.tonconnect.event.TonConnectEventManager
@@ -52,6 +54,7 @@ class TonConnectKit(
     private val eventHandlerSendTransaction: EventHandlerSendTransaction,
     private val appName: String,
     private val appVersion: String,
+    private val database: RoomDatabase? = null,
 ) {
     val sendRequestFlow by eventHandlerSendTransaction::sendRequestFlow
 
@@ -268,6 +271,12 @@ class TonConnectKit(
         tonConnectEventManager.stop()
     }
 
+    /** Waits for the events already received, then closes the database; the kit must not be used afterwards. */
+    suspend fun close() {
+        tonConnectEventManager.close()
+        database?.close()
+    }
+
     companion object {
         private const val MANIFEST_TIMEOUT_MS = 5000L
 
@@ -285,9 +294,14 @@ class TonConnectKit(
          * - [InsufficientDatabaseMigrationSpaceException]: free some space and retry, the plaintext
          *   database is kept unchanged.
          */
-        suspend fun migrateDatabase(context: PlatformContext, databaseKey: ByteArray): DatabaseMigrationResult {
+        suspend fun migrateDatabase(
+            context: PlatformContext,
+            databaseKey: ByteArray,
+            nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
+        ): DatabaseMigrationResult {
             requireValidDatabaseKey(databaseKey)
-            return tonConnectNamespace.migrate(databaseFile(context, TON_CONNECT_DATABASE_NAME), databaseKey)
+            val file = databaseFile(context, resolvedTonConnectDatabaseName(nameResolver))
+            return tonConnectNamespace.migrate(file, databaseKey, nameResolver)
         }
 
         /**
@@ -295,8 +309,8 @@ class TonConnectKit(
          * Throws [DatabaseMigrationConflictException] while another process migrates or clears it; retry
          * later. Stop the kit first.
          */
-        suspend fun clear(context: PlatformContext) {
-            tonConnectNamespace.clear(databaseFile(context, TON_CONNECT_DATABASE_NAME))
+        suspend fun clear(context: PlatformContext, nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity) {
+            tonConnectNamespace.clear(databaseFile(context, resolvedTonConnectDatabaseName(nameResolver)), nameResolver)
         }
 
         /**
@@ -313,10 +327,12 @@ class TonConnectKit(
             databaseKey: ByteArray,
             appName: String,
             appVersion: String,
+            nameResolver: DatabaseNameResolver = DatabaseNameResolver.Identity,
         ): TonConnectKit {
             requireValidDatabaseKey(databaseKey)
+            val databaseName = resolvedTonConnectDatabaseName(nameResolver)
             val database = tonConnectNamespace.open {
-                TonConnectKitDatabase.getInstance(context, TON_CONNECT_DATABASE_NAME, databaseKey)
+                TonConnectKitDatabase.getInstance(context, databaseName, databaseKey, nameResolver)
             }
             val logger = Logger.withTag("TonConnectKit:MainNet")
             val api = API(logger)
@@ -340,7 +356,8 @@ class TonConnectKit(
                 api,
                 eventHandlerSendTransaction,
                 appName,
-                appVersion
+                appVersion,
+                database,
             )
         }
     }

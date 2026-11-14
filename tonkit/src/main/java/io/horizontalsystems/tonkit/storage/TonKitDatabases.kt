@@ -61,11 +61,21 @@ internal const val TON_CONNECT_DATABASE_NAME = "ton-connect"
 
 internal fun kitDatabaseName(walletId: String, network: Network) = "$walletId-${network.name}"
 
-internal fun resolvedKitDatabaseName(walletId: String, network: Network, nameResolver: DatabaseNameResolver): String {
-    val namespace = tonKitNamespace.resolvedName(nameResolver)
-    requireNoPathOrMigrationName(namespace)
-    val name = nameResolver.resolve(kitDatabaseName(walletId, network))
-    requireValidDatabaseName(name, ".$namespace-sqlcipher")
+internal fun resolvedKitDatabaseName(walletId: String, network: Network, nameResolver: DatabaseNameResolver): String =
+    resolvedDatabaseName(tonKitNamespace, kitDatabaseName(walletId, network), nameResolver)
+
+internal fun resolvedTonConnectDatabaseName(nameResolver: DatabaseNameResolver): String =
+    resolvedDatabaseName(tonConnectNamespace, TON_CONNECT_DATABASE_NAME, nameResolver)
+
+private fun resolvedDatabaseName(
+    namespace: KitDatabaseNamespace,
+    defaultName: String,
+    nameResolver: DatabaseNameResolver,
+): String {
+    val resolvedNamespace = namespace.resolvedName(nameResolver)
+    requireNoPathOrMigrationName(resolvedNamespace)
+    val name = nameResolver.resolve(defaultName)
+    requireValidDatabaseName(name, ".$resolvedNamespace-sqlcipher")
     return name
 }
 
